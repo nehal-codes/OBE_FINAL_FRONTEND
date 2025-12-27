@@ -1,10 +1,6 @@
 // frontend/src/apis/HOD/courses.api.js
 import api from "../../config/axiosConfig";
 
-/**
- * COURSE APIs for HOD
- */
-
 const getCourses = () => api.get("/hod/courses");
 
 const getAll = () => api.get("/hod/all-courses");
@@ -20,6 +16,11 @@ const updateCourse = (id, data) => api.put(`/hod/course/${id}`, data);
 
 const deleteCourse = (id) => api.delete(`/hod/course/${id}`);
 
+const getAutoCode = (programmeId, token) =>
+  api.get(`/hod/program/${programmeId}/auto-code`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
 const coursesAPI = {
   getCourses,
   getAll,
@@ -27,6 +28,7 @@ const coursesAPI = {
   createCourse,
   updateCourse,
   deleteCourse,
+  getAutoCode,
 };
 
 export default coursesAPI;

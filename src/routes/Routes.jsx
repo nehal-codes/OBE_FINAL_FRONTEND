@@ -9,6 +9,7 @@ import CourseManagement from "../pages/HOD/CourseManagement";
 import CLOList from "../pages/HOD/CLOSetup/CLOList";
 import CLOCount from "../pages/HOD/CLOSetup/CLOCount";
 import CLOForm from "../pages/HOD/CLOSetup/CLOForm";
+import CLOMapping from "../pages/HOD/CLOSetup/CLOMapping";
 
 export const AppRoutes = () => {
   console.log("✅ Routes loaded");
@@ -41,6 +42,11 @@ export const AppRoutes = () => {
         <Route
           path="hod/courses/:courseId/create-clos/:count"
           element={<CLOForm />}
+        />
+        {/* CLO mapping/review page */}
+        <Route
+          path="hod/courses/:courseId/clo-mapping"
+          element={<CLOMapping />}
         />
       </Route>
 

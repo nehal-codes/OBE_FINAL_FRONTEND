@@ -4,16 +4,16 @@ import api from "../../config/axiosConfig";
 import programmesAPI from "./programmes.api";
 import coursesAPI from "./courses.api";
 import cloAPI from "./clo.api";
-import poAPI from "./po.api";
-import psoAPI from "./pso.api";
+import popsoAPI from "./popso.api";
+import mappingAPI from "./mapping.api";
 
 // Unified HOD API Wrapper
 const HOD_API = {
   programmes: programmesAPI,
   courses: coursesAPI,
   clos: cloAPI,
-  po: poAPI,
-  pso: psoAPI,
+  popso: popsoAPI,
+  map: mappingAPI,
 
   // 🔥 Dashboard API
   getDashboardStats: {
