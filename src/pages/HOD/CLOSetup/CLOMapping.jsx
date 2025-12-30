@@ -80,7 +80,7 @@ const CLOMapping = () => {
         await HOD_API.clos.createCLOForCourse(resolvedCourseId, payload);
       }
 
-      const fresh = await HOD_API.clos.getAll(resolvedCourseId, user?.token);
+      const fresh = await HOD_API.clos.getCLOs(resolvedCourseId, user?.token);
       savedClos = fresh.data;
 
       clearClosDraft();
