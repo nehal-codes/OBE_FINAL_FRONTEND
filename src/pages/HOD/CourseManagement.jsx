@@ -196,6 +196,15 @@ const CourseManagement = () => {
                 >
                   CLOs
                 </button>
+
+                {/* Faculty Assignment Button */}
+                <button
+                  className="px-2 py-1 bg-green-600 text-white rounded ml-2"
+                  onClick={() => navigate(`/hod/courses/${c.id}/assign-faculty`)}
+                  
+                >
+                  Assign Faculty
+                </button>
               </td>
             </tr>
           ))}

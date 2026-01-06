@@ -1,7 +1,7 @@
 // frontend/src/apis/HOD/courses.api.js
 import api from "../../config/axiosConfig";
 
-const getCourses = () => api.get("/hod/courses");
+const getCourses = () => api.get("/hod/all-courses");
 
 const getAll = () => api.get("/hod/all-courses");
 

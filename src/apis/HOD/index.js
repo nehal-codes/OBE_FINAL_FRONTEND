@@ -6,6 +6,7 @@ import coursesAPI from "./courses.api";
 import cloAPI from "./clo.api";
 import popsoAPI from "./popso.api";
 import mappingAPI from "./mapping.api";
+import assignmentsAPI from "./assignments.api";
 
 // Unified HOD API Wrapper
 const HOD_API = {
@@ -14,6 +15,7 @@ const HOD_API = {
   clos: cloAPI,
   popso: popsoAPI,
   map: mappingAPI,
+  assignments: assignmentsAPI, 
 
   // 🔥 Dashboard API
   getDashboardStats: {
