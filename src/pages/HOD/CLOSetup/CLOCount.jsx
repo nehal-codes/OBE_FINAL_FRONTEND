@@ -10,6 +10,7 @@ const CLOCount = () => {
   const [loading, setLoading] = useState(true);
   const [cloCount, setCloCount] = useState(null);
   const [countInput, setCountInput] = useState(1);
+  const [course, setCourse] = useState(null);
   const location = useLocation();
   const courseDraft = location.state?.courseDraft;
   const courseName = location.state?.courseName || courseDraft?.name;
@@ -18,7 +19,30 @@ const CLOCount = () => {
   useEffect(() => {
     // keep placeholder state; no initial fetch required for manual count input
     setLoading(false);
-  }, []);
+    loadCourse();
+  }, [courseId, user?.token]);
+
+  const loadCourse = async () => {
+    try {
+      // If course is a draft or no courseId provided, use provided draft or bail out
+      if (!courseId || courseId === "draft") {
+        setCourse(courseDraft || null);
+        return;
+      }
+
+      // If we don't have a token yet, avoid calling protected API
+      if (!user?.token) {
+        setCourse(null);
+        return;
+      }
+
+      const res = await HOD_API.courses.getCourseById(courseId);
+      setCourse(res.data);
+    } catch (err) {
+      console.log("Course load error:", err);
+      setCourse(null);
+    }
+  };
 
   return (
     <div className="p-6">
@@ -34,9 +58,9 @@ const CLOCount = () => {
 
       <div className="bg-white p-6 rounded shadow">
         <p className="text-sm text-gray-600 mb-3">Course ID: {courseId}</p>
-        {courseName && (
+        {course?.name && (
           <p className="text-sm text-gray-600 mb-3">
-            Course Name: {courseName}
+            Course Name: {course.name}
           </p>
         )}
         <div className="mb-4">

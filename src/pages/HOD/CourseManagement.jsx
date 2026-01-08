@@ -100,7 +100,7 @@ const CourseManagement = () => {
     if (!confirm("Are you sure you want to deactivate this course?")) return;
 
     try {
-      await HOD_API.courses.delete(id, user?.token);
+      await HOD_API.courses.deleteCourse(id, user?.token);
       loadCourses();
     } catch (err) {
       alert("Error deleting course");
@@ -108,7 +108,8 @@ const CourseManagement = () => {
   };
 
   const handleCourseSaved = (courseId) => {
-    navigate(`/hod/courses/${courseId}/clo-count`);
+    // Close the form and refresh the course list; keep user on Course Management
+    setOpenForm(false);
     loadCourses();
   };
 
@@ -147,7 +148,6 @@ const CourseManagement = () => {
             <th className="border px-3 py-2 text-left">Code</th>
             <th className="border px-3 py-2 text-left">Name</th>
             <th className="border px-3 py-2 text-left">Credits</th>
-            <th className="border px-3 py-2 text-left">Programme</th>
             <th className="border px-3 py-2 text-left">Category</th>
             <th className="border px-3 py-2 text-left">Status</th>
             <th className="border px-3 py-2 text-center">Actions</th>
@@ -160,10 +160,6 @@ const CourseManagement = () => {
               <td className="border px-3 py-2">{c.code}</td>
               <td className="border px-3 py-2">{c.name}</td>
               <td className="border px-3 py-2">{c.credits}</td>
-
-              <td className="border px-3 py-2">
-                {c?.department?.program?.code || "—"}
-              </td>
 
               <td className="border px-3 py-2">{c.category}</td>
 
@@ -200,8 +196,9 @@ const CourseManagement = () => {
                 {/* Faculty Assignment Button */}
                 <button
                   className="px-2 py-1 bg-green-600 text-white rounded ml-2"
-                  onClick={() => navigate(`/hod/courses/${c.id}/assign-faculty`)}
-                  
+                  onClick={() =>
+                    navigate(`/hod/courses/${c.id}/assign-faculty`)
+                  }
                 >
                   Assign Faculty
                 </button>

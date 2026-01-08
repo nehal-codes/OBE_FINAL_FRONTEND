@@ -18,6 +18,17 @@ const CLOForm = () => {
   const [clos, setClos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [existingCount, setExistingCount] = useState(0);
+  const [course, setCourse] = useState(null);
+
+  // determine if editing a single existing CLO
+  const isEdit = Boolean(
+    location.state?.editClo ||
+      (location.state?.closDraft &&
+        Array.isArray(location.state.closDraft) &&
+        location.state.closDraft.length === 1 &&
+        (location.state.closDraft[0].id || location.state.closDraft[0]._id))
+  );
+
   const bloomLevels = [
     "REMEMBER",
     "UNDERSTAND",
@@ -36,6 +47,8 @@ const CLOForm = () => {
         setExistingCount(0);
         if (location.state?.closDraft) {
           setClos(location.state.closDraft);
+          // If we are editing an existing CLO, ensure the count is 1 and keep form compact
+          if (isEdit) setCount(1);
         } else {
           setClos(
             Array.from({ length: count }, (_, i) => ({
@@ -90,6 +103,29 @@ const CLOForm = () => {
     loadExisting();
   }, [count, courseId, user?.token]);
 
+  // Load course details (use draft if course is a draft)
+  useEffect(() => {
+    const loadCourseDetails = async () => {
+      try {
+        if (!courseId || courseId === "draft") {
+          setCourse(courseDraft || null);
+          return;
+        }
+
+        // Ensure we have token for protected routes
+        if (!user?.token) return;
+
+        const res = await HOD_API.courses.getCourseById(courseId);
+        setCourse(res?.data || null);
+      } catch (err) {
+        console.error("Error loading course:", err);
+        setCourse(null);
+      }
+    };
+
+    loadCourseDetails();
+  }, [courseId, user?.token, courseDraft]);
+
   const onChangeClo = (index, field, value) => {
     setClos((prev) =>
       prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
@@ -116,6 +152,40 @@ const CLOForm = () => {
     setLoading(true);
 
     try {
+      // If editing a single CLO → perform update flow
+      if (isEdit) {
+        // Ensure we have course id
+        const targetCourseId = courseId;
+        if (!targetCourseId || targetCourseId === "draft") {
+          throw new Error("Cannot update CLO without a valid course id");
+        }
+
+        for (let i = 0; i < clos.length; i++) {
+          const c = clos[i];
+          const id = c.id || c._id;
+          if (!id) throw new Error("Missing CLO id for update");
+
+          const cloPayload = {
+            code: c.cloCode || c.code,
+            statement: c.description || c.statement,
+            bloomLevel: c.bloomLevel,
+            attainmentThreshold: Number(
+              c.threshold || c.attainmentThreshold || 50
+            ),
+            version: c.version || null,
+            order: c.order || i + 1,
+          };
+
+          await HOD_API.clos.updateCLO(id, cloPayload);
+        }
+
+        clearClosDraft();
+        alert("CLO updated successfully");
+        // After save, go back to CLO list
+        navigate(`/hod/courses/${courseId}/clos`);
+        return;
+      }
+
       // ---------------------------------------------
       // STEP 1 — ENSURE COURSE EXISTS
       // ---------------------------------------------
@@ -164,7 +234,6 @@ const CLOForm = () => {
           bloomLevel: c.bloomLevel, // REQUIRED
           attainmentThreshold: Number(c.threshold || 50), // OPTIONAL
           order: existingCount + i + 1, // OPTIONAL
-          version: c.version || null, // OPTIONAL
         };
 
         await HOD_API.clos.createCLOForCourse(targetCourseId, cloPayload);
@@ -203,7 +272,7 @@ const CLOForm = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">
-          Create CLOs for Course {courseId}
+          Create CLOs for Course {course?.name || courseDraft?.name || courseId}
         </h1>
         <button
           className="px-3 py-1 bg-gray-100 rounded"
@@ -215,24 +284,28 @@ const CLOForm = () => {
 
       <form onSubmit={submit} className="bg-white p-6 rounded shadow">
         <label className="block mb-4">
-          <div className="text-sm text-gray-600">Course ID</div>
+          <div className="text-sm text-gray-600">Course</div>
           <input
-            value={courseId}
+            value={course?.name || courseDraft?.name || courseId || ""}
             disabled
             className="w-48 border px-2 py-1 bg-gray-100"
           />
         </label>
 
-        <label className="block mb-4">
-          <div className="text-sm text-gray-600">Number of CLOs</div>
-          <input
-            type="number"
-            min={1}
-            value={count}
-            onChange={(e) => setCount(Math.max(1, Number(e.target.value || 0)))}
-            className="w-24 border px-2 py-1"
-          />
-        </label>
+        {!isEdit && (
+          <label className="block mb-4">
+            <div className="text-sm text-gray-600">Number of CLOs</div>
+            <input
+              type="number"
+              min={1}
+              value={count}
+              onChange={(e) =>
+                setCount(Math.max(1, Number(e.target.value || 0)))
+              }
+              className="w-24 border px-2 py-1"
+            />
+          </label>
+        )}
 
         {clos.map((c, idx) => (
           <div key={idx} className="mb-4 border p-3 rounded">
@@ -300,16 +373,6 @@ const CLOForm = () => {
                 />
               </label>
             </div>
-
-            <label className="block mt-2">
-              <div className="text-sm text-gray-600">Version</div>
-              <input
-                name={`version-${idx}`}
-                value={c.version}
-                onChange={(e) => onChangeClo(idx, "version", e.target.value)}
-                className="w-full border px-2 py-1"
-              />
-            </label>
           </div>
         ))}
 
@@ -321,25 +384,29 @@ const CLOForm = () => {
           >
             Cancel
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              // save draft and navigate to mapping with current clos as draft (do not save)
-              saveClosDraft(clos);
-              navigate(`/hod/courses/${courseId || "draft"}/clo-mapping`, {
-                state: { courseDraft, closDraft: clos, returnTo },
-              });
-            }}
-            className="px-3 py-1 bg-green-600 text-white rounded"
-          >
-            Next
-          </button>
+
+          {!isEdit && (
+            <button
+              type="button"
+              onClick={() => {
+                // save draft and navigate to mapping with current clos as draft (do not save)
+                saveClosDraft(clos);
+                navigate(`/hod/courses/${courseId || "draft"}/clo-mapping`, {
+                  state: { courseDraft, closDraft: clos, returnTo },
+                });
+              }}
+              className="px-3 py-1 bg-green-600 text-white rounded"
+            >
+              Next
+            </button>
+          )}
+
           <button
             type="submit"
             disabled={loading}
             className="px-3 py-1 bg-blue-600 text-white rounded"
           >
-            {loading ? "Saving..." : "Create CLOs"}
+            {loading ? "Saving..." : isEdit ? "Save CLO" : "Create CLOs"}
           </button>
         </div>
       </form>
