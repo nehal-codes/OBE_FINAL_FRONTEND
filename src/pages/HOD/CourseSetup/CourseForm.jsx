@@ -118,7 +118,7 @@ const CourseForm = ({
 
       let res;
       if (initialData?.id) {
-        res = await HOD_API.courses.update(
+        res = await HOD_API.courses.updateCourse(
           initialData.id,
           payload,
           user?.token
@@ -139,7 +139,14 @@ const CourseForm = ({
         });
         return;
       }
-      onClose?.();
+
+      // If parent provided an onSaved handler, let parent control navigation
+      if (onSaved) {
+        return;
+      }
+
+      // After saving, navigate to Course Management page
+      navigate("/hod/courses");
     } catch (error) {
       console.error("Save error:", error.response?.data || error.message);
       alert(error.response?.data?.error || "Error saving course");
