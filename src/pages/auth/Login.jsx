@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FiBook } from "react-icons/fi";
+import { FiBook, FiLock, FiMail, FiLogIn } from "react-icons/fi";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -23,7 +23,10 @@ const Login = () => {
       await login(credentials);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.error || "Login failed");
+      setError(
+        err.response?.data?.error ||
+          "Login failed. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }
@@ -34,83 +37,112 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white shadow-md rounded-lg p-8">
-        {/* Header */}
-        <div className="flex items-center justify-center space-x-3 mb-6">
-          <FiBook className="text-blue-600 text-4xl" />
-          <h1 className="text-3xl font-bold text-gray-800">OBE System</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+
+        {/* Logo & Title */}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center">
+            <FiBook className="text-white text-3xl" />
+          </div>
+
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900">
+              OBE System
+            </h1>
+            <p className="mt-2 text-gray-600">
+              Outcome-Based Education Platform
+            </p>
+          </div>
         </div>
 
-        <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
-          Sign In
-        </h2>
-
-        {/* Error message */}
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              required
-              value={credentials.email}
-              onChange={handleChange}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300"
-              autoComplete="email"
-              autoFocus
-            />
+        {/* Card */}
+        <div className="mt-10 bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl p-8 border border-gray-100">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Welcome Back
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Sign in to access your dashboard
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              required
-              value={credentials.password}
-              onChange={handleChange}
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300"
-              autoComplete="current-password"
-            />
-          </div>
+          {/* Error */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md font-semibold hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Sign In"}
-          </button>
-        </form>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <FiMail className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={credentials.email}
+                  onChange={handleChange}
+                  className="pl-10 w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50 hover:bg-white transition"
+                  placeholder="Enter your email"
+                  autoFocus
+                />
+              </div>
+            </div>
 
-        {/* Demo credentials */}
-        <div className="mt-6 bg-gray-100 p-4 rounded">
-          <p className="text-sm font-semibold text-gray-600 mb-2">
-            Demo Credentials:
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <FiLock className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  value={credentials.password}
+                  onChange={handleChange}
+                  className="pl-10 w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50 hover:bg-white transition"
+                  placeholder="Enter your password"
+                />
+              </div>
+            </div>
+
+            {/* Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center py-3.5 rounded-xl text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Signing In...
+                </>
+              ) : (
+                <>
+                  <FiLogIn className="mr-2" />
+                  Sign In
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-600">
+            © {new Date().getFullYear()} OBE System. All rights reserved.
           </p>
-
-          <p className="text-sm text-gray-700">
-            <strong>Admin:</strong> admin@obe.edu / admin123
-          </p>
-
-          <p className="text-sm text-gray-700">
-            <strong>HOD:</strong> hod@college.edu / hod123
-          </p>
-
-          <p className="text-sm text-gray-700">
-            <strong>Faculty:</strong> faculty.cse@obe.edu / faculty123
+          <p className="text-xs text-gray-500 mt-1">
+            Secure login with encryption
           </p>
         </div>
       </div>
