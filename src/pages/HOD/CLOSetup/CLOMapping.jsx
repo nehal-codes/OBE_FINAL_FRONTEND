@@ -41,12 +41,34 @@ const CLOMapping = () => {
   const [showLevelInfo, setShowLevelInfo] = useState(true);
   const [filterLevel, setFilterLevel] = useState("all");
   const [courseInfo, setCourseInfo] = useState(null);
+  // store the actual resolved course id (may be different if a draft was created)
+  const [actualCourseId, setActualCourseId] = useState(courseId);
 
   const mappingLevels = [
-    { value: 0, label: "None", color: "bg-gray-100 text-gray-600", description: "No correlation" },
-    { value: 1, label: "Low", color: "bg-blue-100 text-blue-700", description: "Indirect/partial coverage" },
-    { value: 2, label: "Medium", color: "bg-green-100 text-green-700", description: "Moderate coverage" },
-    { value: 3, label: "High", color: "bg-emerald-100 text-emerald-700", description: "Strong/complete coverage" },
+    {
+      value: 0,
+      label: "None",
+      color: "bg-gray-100 text-gray-600",
+      description: "No correlation",
+    },
+    {
+      value: 1,
+      label: "Low",
+      color: "bg-blue-100 text-blue-700",
+      description: "Indirect/partial coverage",
+    },
+    {
+      value: 2,
+      label: "Medium",
+      color: "bg-green-100 text-green-700",
+      description: "Moderate coverage",
+    },
+    {
+      value: 3,
+      label: "High",
+      color: "bg-emerald-100 text-emerald-700",
+      description: "Strong/complete coverage",
+    },
   ];
 
   const ensureCourseAndClosExist = async () => {
@@ -111,7 +133,8 @@ const CLOMapping = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const { resolvedCourseId, savedClos } = await ensureCourseAndClosExist();
+        const { resolvedCourseId, savedClos } =
+          await ensureCourseAndClosExist();
 
         // Load course info
         const courseRes = await HOD_API.courses.getCourseById(resolvedCourseId);
@@ -120,11 +143,14 @@ const CLOMapping = () => {
         setClos(savedClos);
 
         // load POs & PSOs
-        const poRes = await HOD_API.popso.getPOPSO(resolvedCourseId, user?.token);
+        const poRes = await HOD_API.popso.getPOPSO(
+          resolvedCourseId,
+          user?.token
+        );
         setPos(poRes?.data?.pos || []);
         setPsos(poRes?.data?.psos || []);
 
-        // build matrix
+        // build matrix with defaults
         const init = {};
         savedClos.forEach((c) => {
           init[c.id] = {};
@@ -133,7 +159,123 @@ const CLOMapping = () => {
           );
         });
 
+        // try to load existing mappings from server and apply them (robust parsing)
+        try {
+          const mapRes = await HOD_API.map.getMappings(
+            resolvedCourseId,
+            user?.token
+          );
+          console.debug("Fetched mappings:", mapRes?.data);
+          console.log(mapRes);
+          const resp = mapRes?.data || {};
+
+          // support the server response shape: cloPoMappings / cloPsoMappings
+          let poMappings =
+            resp.cloPoMappings ||
+            resp.clo_po_mappings ||
+            resp.cloPo ||
+            resp.poMappings ||
+            resp.pos ||
+            [];
+          let psoMappings =
+            resp.cloPsoMappings ||
+            resp.clo_pso_mappings ||
+            resp.cloPso ||
+            resp.psoMappings ||
+            resp.psos ||
+            [];
+
+          // resp might actually be an array of mappings or have other shapes — fall back to parsing arrays
+          if (
+            Array.isArray(resp) &&
+            poMappings.length === 0 &&
+            psoMappings.length === 0
+          ) {
+            resp.forEach((m) => {
+              if (m.poId || m.po_id || m.po || m.outcomeType === "po")
+                poMappings.push(m);
+              else if (m.psoId || m.pso_id || m.pso || m.outcomeType === "pso")
+                psoMappings.push(m);
+            });
+          } else if (
+            !poMappings.length &&
+            !psoMappings.length &&
+            Array.isArray(resp.mappings)
+          ) {
+            resp.mappings.forEach((m) => {
+              if (
+                m.type === "po" ||
+                m.outcomeType === "po" ||
+                m.poId ||
+                m.po_id ||
+                m.po
+              )
+                poMappings.push(m);
+              if (
+                m.type === "pso" ||
+                m.outcomeType === "pso" ||
+                m.psoId ||
+                m.pso_id ||
+                m.pso
+              )
+                psoMappings.push(m);
+            });
+          }
+
+          const normalizeLevel = (m) => {
+            const lvl =
+              m.level ?? m.score ?? m.value ?? m.weight ?? m.levelValue ?? 0;
+            return Number(lvl) || 0;
+          };
+          const getCloId = (m) => m.cloId || m.clo_id || m.clo;
+          const getPoId = (m) => m.poId || m.po_id || m.po || m.outcomeId;
+          const getPsoId = (m) => m.psoId || m.pso_id || m.pso || m.outcomeId;
+
+          poMappings.forEach((m) => {
+            const cloId = getCloId(m);
+            const poId = getPoId(m);
+            const level = normalizeLevel(m);
+            if (
+              cloId &&
+              poId &&
+              init[cloId] &&
+              Object.prototype.hasOwnProperty.call(init[cloId], poId)
+            ) {
+              init[cloId][poId] = level;
+            } else {
+              console.debug(
+                "Skipping PO mapping due to missing keys or mismatch:",
+                m
+              );
+            }
+          });
+
+          psoMappings.forEach((m) => {
+            const cloId = getCloId(m);
+            const psoId = getPsoId(m);
+            const level = normalizeLevel(m);
+            if (
+              cloId &&
+              psoId &&
+              init[cloId] &&
+              Object.prototype.hasOwnProperty.call(init[cloId], psoId)
+            ) {
+              init[cloId][psoId] = level;
+            } else {
+              console.debug(
+                "Skipping PSO mapping due to missing keys or mismatch:",
+                m
+              );
+            }
+          });
+        } catch (err) {
+          console.warn("Could not fetch existing mappings:", err);
+        }
+
         setMatrix(init);
+
+        // store resolved course id so saves use correct id (important when created from drafts)
+        setActualCourseId(resolvedCourseId);
       } catch (e) {
         console.error(e);
         alert("Could not initialize mapping. Check console.");
@@ -155,21 +297,21 @@ const CLOMapping = () => {
 
   const quickSetRow = (cloKey, value) => {
     const newRow = {};
-    [...pos, ...psos].forEach(o => {
+    [...pos, ...psos].forEach((o) => {
       newRow[o.id] = value;
     });
-    setMatrix(prev => ({
+    setMatrix((prev) => ({
       ...prev,
-      [cloKey]: newRow
+      [cloKey]: newRow,
     }));
   };
 
   const quickSetColumn = (outcomeId, value) => {
     const newMatrix = { ...matrix };
-    clos.forEach(c => {
+    clos.forEach((c) => {
       newMatrix[c.id] = {
         ...newMatrix[c.id],
-        [outcomeId]: value
+        [outcomeId]: value,
       };
     });
     setMatrix(newMatrix);
@@ -200,7 +342,7 @@ const CLOMapping = () => {
 
     try {
       await HOD_API.map.saveMappings(
-        courseId,
+        actualCourseId,
         { poMappings, psoMappings },
         user?.token
       );
@@ -219,8 +361,8 @@ const CLOMapping = () => {
     let filledCells = 0;
     let totalStrength = 0;
 
-    clos.forEach(c => {
-      [...pos, ...psos].forEach(o => {
+    clos.forEach((c) => {
+      [...pos, ...psos].forEach((o) => {
         totalCells++;
         const level = matrix[c.id]?.[o.id] || 0;
         if (level > 0) {
@@ -230,8 +372,10 @@ const CLOMapping = () => {
       });
     });
 
-    const coveragePercentage = totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0;
-    const avgStrength = filledCells > 0 ? (totalStrength / filledCells).toFixed(1) : 0;
+    const coveragePercentage =
+      totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0;
+    const avgStrength =
+      filledCells > 0 ? (totalStrength / filledCells).toFixed(1) : 0;
 
     return { coveragePercentage, avgStrength, filledCells, totalCells };
   };
@@ -269,18 +413,24 @@ const CLOMapping = () => {
                   <div className="p-3 bg-white/20 rounded-xl">
                     <FiGrid className="text-3xl" />
                   </div>
-                  <h1 className="text-3xl md:text-4xl font-bold">CLO-PO/PSO Mapping Matrix</h1>
+                  <h1 className="text-3xl md:text-4xl font-bold">
+                    CLO-PO/PSO Mapping Matrix
+                  </h1>
                 </div>
                 <div className="flex flex-wrap items-center gap-6">
                   {courseInfo && (
                     <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl text-lg">
                       <FiBook className="text-xl" />
-                      <span className="font-semibold">{courseInfo.code} - {courseInfo.name}</span>
+                      <span className="font-semibold">
+                        {courseInfo.code} - {courseInfo.name}
+                      </span>
                     </div>
                   )}
                   <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl text-lg">
                     <FiTarget className="text-xl" />
-                    <span>{clos.length} CLOs × {pos.length + psos.length} Outcomes</span>
+                    <span>
+                      {clos.length} CLOs × {pos.length + psos.length} Outcomes
+                    </span>
                   </div>
                 </div>
               </div>
@@ -290,7 +440,11 @@ const CLOMapping = () => {
                   onClick={() => setExpandedView(!expandedView)}
                   className="flex items-center gap-3 px-5 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-lg"
                 >
-                  {expandedView ? <FiMinimize2 className="text-xl" /> : <FiMaximize2 className="text-xl" />}
+                  {expandedView ? (
+                    <FiMinimize2 className="text-xl" />
+                  ) : (
+                    <FiMaximize2 className="text-xl" />
+                  )}
                   {expandedView ? "Compact View" : "Expand View"}
                 </button>
                 <button
@@ -312,13 +466,13 @@ const CLOMapping = () => {
                 {stats.coveragePercentage}%
               </div>
               <div className="h-3 bg-gray-200 rounded-full mt-3 overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
                   style={{ width: `${stats.coveragePercentage}%` }}
                 ></div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-md">
               <div className="text-lg text-gray-600 mb-2">Average Strength</div>
               <div className="text-3xl font-bold text-gray-900">
@@ -328,7 +482,7 @@ const CLOMapping = () => {
                 {stats.filledCells} of {stats.totalCells} cells filled
               </div>
             </div>
-            
+
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-md">
               <div className="text-lg text-gray-600 mb-2">Program Outcomes</div>
               <div className="text-3xl font-bold text-gray-900">
@@ -338,7 +492,7 @@ const CLOMapping = () => {
                 {psos.length} PSOs
               </div>
             </div>
-            
+
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-md">
               <div className="text-lg text-gray-600 mb-2">Course CLOs</div>
               <div className="text-3xl font-bold text-gray-900">
@@ -372,14 +526,23 @@ const CLOMapping = () => {
               </select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {mappingLevels.map(level => (
-                <div key={level.value} className="flex items-start gap-4 p-4 bg-white rounded-xl border-2 border-gray-200">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xl ${level.color}`}>
+              {mappingLevels.map((level) => (
+                <div
+                  key={level.value}
+                  className="flex items-start gap-4 p-4 bg-white rounded-xl border-2 border-gray-200"
+                >
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xl ${level.color}`}
+                  >
                     {level.value}
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900 text-lg">{level.label}</div>
-                    <div className="text-base text-gray-600">{level.description}</div>
+                    <div className="font-semibold text-gray-900 text-lg">
+                      {level.label}
+                    </div>
+                    <div className="text-base text-gray-600">
+                      {level.description}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -399,19 +562,30 @@ const CLOMapping = () => {
                       Course Learning Outcomes (CLOs)
                     </div>
                   </th>
-                  
+
                   {/* POs Header - Increased size */}
                   {pos.length > 0 && (
-                    <th colSpan={pos.length} className="py-4 px-3 text-center border-b-2 border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100/50">
+                    <th
+                      colSpan={pos.length}
+                      className="py-4 px-3 text-center border-b-2 border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100/50"
+                    >
                       <div className="flex items-center justify-center gap-3">
-                        <span className="font-bold text-blue-800 text-xl">Program Outcomes (POs)</span>
-                        <span className="text-lg font-normal text-blue-700">({pos.length})</span>
+                        <span className="font-bold text-blue-800 text-xl">
+                          Program Outcomes (POs)
+                        </span>
+                        <span className="text-lg font-normal text-blue-700">
+                          ({pos.length})
+                        </span>
                       </div>
                       <div className="flex justify-center gap-2 mt-2">
-                        {mappingLevels.map(level => (
+                        {mappingLevels.map((level) => (
                           <button
                             key={`po-${level.value}`}
-                            onClick={() => pos.forEach(p => quickSetColumn(p.id, level.value))}
+                            onClick={() =>
+                              pos.forEach((p) =>
+                                quickSetColumn(p.id, level.value)
+                              )
+                            }
                             className={`px-3 py-1.5 text-sm rounded-lg font-medium ${level.color} hover:opacity-90 transition-opacity`}
                             title={`Set all POs to ${level.label}`}
                           >
@@ -421,19 +595,30 @@ const CLOMapping = () => {
                       </div>
                     </th>
                   )}
-                  
+
                   {/* PSOs Header - Increased size */}
                   {psos.length > 0 && (
-                    <th colSpan={psos.length} className="py-4 px-3 text-center border-b-2 border-gray-300 bg-gradient-to-r from-green-50 to-green-100/50">
+                    <th
+                      colSpan={psos.length}
+                      className="py-4 px-3 text-center border-b-2 border-gray-300 bg-gradient-to-r from-green-50 to-green-100/50"
+                    >
                       <div className="flex items-center justify-center gap-3">
-                        <span className="font-bold text-green-800 text-xl">Program Specific Outcomes (PSOs)</span>
-                        <span className="text-lg font-normal text-green-700">({psos.length})</span>
+                        <span className="font-bold text-green-800 text-xl">
+                          Program Specific Outcomes (PSOs)
+                        </span>
+                        <span className="text-lg font-normal text-green-700">
+                          ({psos.length})
+                        </span>
                       </div>
                       <div className="flex justify-center gap-2 mt-2">
-                        {mappingLevels.map(level => (
+                        {mappingLevels.map((level) => (
                           <button
                             key={`pso-${level.value}`}
-                            onClick={() => psos.forEach(p => quickSetColumn(p.id, level.value))}
+                            onClick={() =>
+                              psos.forEach((p) =>
+                                quickSetColumn(p.id, level.value)
+                              )
+                            }
                             className={`px-3 py-1.5 text-sm rounded-lg font-medium ${level.color} hover:opacity-90 transition-opacity`}
                             title={`Set all PSOs to ${level.label}`}
                           >
@@ -444,20 +629,25 @@ const CLOMapping = () => {
                     </th>
                   )}
                 </tr>
-                
+
                 {/* Outcome Codes Row - Increased size */}
                 <tr className="bg-gray-50">
                   <th className="py-4 px-6 text-base font-semibold text-gray-700 border-b-2 border-gray-300 sticky left-0 bg-inherit z-20">
                     CLO Code / Description
                   </th>
-                  {[...pos, ...psos].map(o => (
-                    <th key={o.id} className={`py-4 px-3 text-center border-b-2 border-gray-300 ${
-                      pos.includes(o) ? 'bg-blue-50/30' : 'bg-green-50/30'
-                    }`}>
+                  {[...pos, ...psos].map((o) => (
+                    <th
+                      key={o.id}
+                      className={`py-4 px-3 text-center border-b-2 border-gray-300 ${
+                        pos.includes(o) ? "bg-blue-50/30" : "bg-green-50/30"
+                      }`}
+                    >
                       <div className="flex flex-col items-center">
-                        <span className="font-bold text-gray-900 text-lg">{o.code}</span>
+                        <span className="font-bold text-gray-900 text-lg">
+                          {o.code}
+                        </span>
                         <div className="flex gap-2 mt-2">
-                          {mappingLevels.map(level => (
+                          {mappingLevels.map((level) => (
                             <button
                               key={`${o.id}-${level.value}`}
                               onClick={() => quickSetColumn(o.id, level.value)}
@@ -473,31 +663,45 @@ const CLOMapping = () => {
                   ))}
                 </tr>
               </thead>
-              
+
               <tbody>
                 {clos.map((c) => {
                   const cloKey = c.id || c.cloCode;
-                  const shouldShowRow = filterLevel === "all" || 
-                    [...pos, ...psos].some(o => matrix[cloKey]?.[o.id] == filterLevel);
+                  const shouldShowRow =
+                    filterLevel === "all" ||
+                    [...pos, ...psos].some(
+                      (o) => matrix[cloKey]?.[o.id] == filterLevel
+                    );
 
                   if (!shouldShowRow) return null;
 
                   return (
-                    <tr key={cloKey} className="border-b border-gray-200 hover:bg-gray-50/30 transition-colors">
+                    <tr
+                      key={cloKey}
+                      className="border-b border-gray-200 hover:bg-gray-50/30 transition-colors"
+                    >
                       <td className="py-6 px-6 sticky left-0 bg-white z-20 min-w-[300px]">
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0">
-                            <span className="font-bold text-blue-800 text-lg">{c.cloCode || c.code}</span>
+                            <span className="font-bold text-blue-800 text-lg">
+                              {c.cloCode || c.code}
+                            </span>
                           </div>
                           <div className="flex-1">
-                            <div className="font-semibold text-gray-900 text-lg mb-2">{c.cloCode || c.code}</div>
-                            <div className="text-base text-gray-600 line-clamp-2">{c.description || c.statement}</div>
+                            <div className="font-semibold text-gray-900 text-lg mb-2">
+                              {c.cloCode || c.code}
+                            </div>
+                            <div className="text-base text-gray-600 line-clamp-2">
+                              {c.description || c.statement}
+                            </div>
                             <div className="flex gap-2 mt-3">
                               {/* Replaced "Set Row" buttons with number buttons 0,1,2,3 */}
-                              {mappingLevels.map(level => (
+                              {mappingLevels.map((level) => (
                                 <button
                                   key={`row-${cloKey}-${level.value}`}
-                                  onClick={() => quickSetRow(cloKey, level.value)}
+                                  onClick={() =>
+                                    quickSetRow(cloKey, level.value)
+                                  }
                                   className={`w-8 h-8 rounded-lg font-bold text-lg ${level.color} hover:scale-110 transition-transform flex items-center justify-center`}
                                   title={`Set entire row to ${level.label}`}
                                 >
@@ -508,16 +712,28 @@ const CLOMapping = () => {
                           </div>
                         </div>
                       </td>
-                      
-                      {[...pos, ...psos].map(o => {
+
+                      {[...pos, ...psos].map((o) => {
                         const level = matrix[cloKey]?.[o.id] || 0;
-                        const levelConfig = mappingLevels.find(l => l.value === level) || mappingLevels[0];
-                        const isHighlighted = filterLevel !== "all" && level == filterLevel;
-                        
+                        const levelConfig =
+                          mappingLevels.find((l) => l.value === level) ||
+                          mappingLevels[0];
+                        const isHighlighted =
+                          filterLevel !== "all" && level == filterLevel;
+
                         return (
-                          <td key={`${cloKey}-${o.id}`} className={`py-5 px-3 text-center ${
-                            pos.includes(o) ? 'bg-blue-50/10' : 'bg-green-50/10'
-                          } ${isHighlighted ? 'ring-3 ring-blue-500 ring-inset' : ''}`}>
+                          <td
+                            key={`${cloKey}-${o.id}`}
+                            className={`py-5 px-3 text-center ${
+                              pos.includes(o)
+                                ? "bg-blue-50/10"
+                                : "bg-green-50/10"
+                            } ${
+                              isHighlighted
+                                ? "ring-3 ring-blue-500 ring-inset"
+                                : ""
+                            }`}
+                          >
                             <div className="flex flex-col items-center">
                               <div className="relative">
                                 <input
@@ -525,7 +741,13 @@ const CLOMapping = () => {
                                   min="0"
                                   max="3"
                                   value={level}
-                                  onChange={(e) => updateCell(cloKey, o.id, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    updateCell(
+                                      cloKey,
+                                      o.id,
+                                      Number(e.target.value)
+                                    )
+                                  }
                                   className={`w-14 h-14 text-center text-xl font-bold rounded-2xl border-3 focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer ${levelConfig.color}`}
                                 />
                                 {expandedView && level > 0 && (
@@ -560,8 +782,8 @@ const CLOMapping = () => {
               onClick={() => {
                 // Reset all mappings to 0
                 const resetMatrix = { ...matrix };
-                Object.keys(resetMatrix).forEach(cloKey => {
-                  Object.keys(resetMatrix[cloKey]).forEach(outcomeId => {
+                Object.keys(resetMatrix).forEach((cloKey) => {
+                  Object.keys(resetMatrix[cloKey]).forEach((outcomeId) => {
                     resetMatrix[cloKey][outcomeId] = 0;
                   });
                 });
@@ -573,7 +795,7 @@ const CLOMapping = () => {
               Reset All
             </button>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={submit}

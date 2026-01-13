@@ -6,8 +6,15 @@ const saveMappings = (courseId, data, token) =>
     headers: { Authorization: `Bearer ${token}` },
   });
 
+// Fetch existing mappings for a course
+const getMappings = (courseId, token) =>
+  api.get(`/hod/course/${courseId}/map-clos`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
 const mappingAPI = {
   saveMappings,
+  getMappings,
 };
 
 export default mappingAPI;
