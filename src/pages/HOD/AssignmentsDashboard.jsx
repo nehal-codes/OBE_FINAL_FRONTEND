@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import HOD_API from "../../apis/HOD";
+import {
+  FiFilter,
+  FiCalendar,
+  FiRefreshCw,
+  FiBook,
+  FiDivide,
+  FiX,
+  FiBookOpen,
+  FiUser,
+  FiMail,
+  FiChevronLeft,
+  FiChevronRight,
+  FiSearch,
+} from "react-icons/fi";
 
 const AssignmentsDashboard = () => {
   const [assignments, setAssignments] = useState([]);
@@ -8,7 +22,8 @@ const AssignmentsDashboard = () => {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     year: new Date().getFullYear(),
-    semester: 1
+    semester: "",
+    semesterType: "",
   });
 
   // Fetch assignments from backend
@@ -19,7 +34,23 @@ const AssignmentsDashboard = () => {
       const response = await HOD_API.assignments.getAllDepartmentAssignments(filters);
       
       console.log('✅ Assignments API Response:', response.data);
-      setAssignments(response.data.assignments || []);
+      
+      let filteredData = response.data.assignments || [];
+      
+      if (filters.semesterType) {
+        filteredData = filteredData.filter(assignment => {
+          if (!assignment.semester) return false;
+          const semesterNum = parseInt(assignment.semester);
+          if (filters.semesterType === 'even') {
+            return semesterNum % 2 === 0;
+          } else if (filters.semesterType === 'odd') {
+            return semesterNum % 2 === 1;
+          }
+          return true;
+        });
+      }
+      
+      setAssignments(filteredData);
     } catch (err) {
       console.error("Error fetching assignments:", err);
       console.error("Error details:", err.response?.data || err.message);
@@ -70,7 +101,7 @@ const AssignmentsDashboard = () => {
     if (!loading) {
       fetchAssignments();
     }
-  }, [filters.year, filters.semester]);
+  }, [filters.year, filters.semester, filters.semesterType]);
 
   // Handle filter changes
   const handleFilterChange = (e) => {
@@ -81,293 +112,344 @@ const AssignmentsDashboard = () => {
     }));
   };
 
-  // Check endpoints for debugging
-  const checkEndpoints = async () => {
-    console.log('🔍 Checking HOD API endpoints...');
-    
-    try {
-      const assignmentsTest = await HOD_API.assignments.getAllDepartmentAssignments(filters);
-      console.log('✅ Assignments endpoint OK:', assignmentsTest.status);
-      
-      const statsTest = await HOD_API.assignments.getAssignmentsStats();
-      console.log('✅ Stats endpoint OK:', statsTest.status);
-      
-      alert('✅ Both endpoints are working!');
-      
-    } catch (error) {
-      console.error('❌ Endpoint check failed:', error);
-      alert(`❌ Endpoint check failed: ${error.message}`);
-    }
+  // Clear specific filter
+  const clearFilter = (filterName) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: ""
+    }));
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setFilters({
+      year: new Date().getFullYear(),
+      semester: "",
+      semesterType: "",
+    });
   };
 
   // Loading state
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>Loading dashboard data...</p>
-          <button onClick={checkEndpoints} className="btn btn-secondary">
-            Check API Endpoints
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="inline-block animate-spin rounded-full h-14 w-14 border-t-3 border-b-3 border-blue-600 mb-4"></div>
+          <p className="text-lg text-gray-600">Loading dashboard data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Header */}
-      <div className="header">
-        <h1>
-          <span className="header-icon">📊</span>
-          Course Assignments Dashboard
-        </h1>
-        
-        <p className="subtitle">
-          Manage and view faculty course assignments across the department
-        </p>
-        
-        <div className="header-actions">
-          <div className="filters">
-            <div className="form-group">
-              <label>Year</label>
-              <select
-                name="year"
-                value={filters.year}
-                onChange={handleFilterChange}
-                className="filter-select"
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-white to-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <FiBook className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Course Assignments</h1>
+                    <p className="text-gray-600 text-sm">
+                      Manage and view faculty course assignments across the department
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={loadAllData}
+                className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-medium text-sm hover:shadow-sm"
               >
-                {[2022, 2023, 2024, 2025, 2026].map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+                <FiRefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
             </div>
-            
-            <div className="form-group">
-              <label>Semester</label>
-              <select
-                name="semester"
-                value={filters.semester}
-                onChange={handleFilterChange}
-                className="filter-select"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                  <option key={sem} value={sem}>
-                    Semester {sem}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <button 
-              className="btn btn-secondary"
-              onClick={loadAllData}
-            >
-              Refresh Data
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="alert alert-error">
-          <h3>Error</h3>
-          <p>{error}</p>
-          <div className="alert-actions">
-            <button onClick={loadAllData} className="btn btn-primary">
-              Retry
-            </button>
-            <button onClick={checkEndpoints} className="btn btn-secondary">
-              Check Endpoints
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stats-card">
-          <div className="stats-header">
-            <h3>Total Assignments</h3>
-          </div>
-          <div className="stats-content">
-            <div className="stats-icon">
-              <div className="icon-circle">
-                {stats.overview?.totalAssignments || 0}
-              </div>
-            </div>
-            <div className="stats-info">
-              <p className="stats-title">All Time</p>
-              <p className="stats-subtitle">
-                Across all semesters and years
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="stats-card">
-          <div className="stats-header">
-            <h3>Current Year ({stats.overview?.currentYear || new Date().getFullYear()})</h3>
-          </div>
-          <div className="stats-content">
-            <div className="stats-icon">
-              <div className="icon-circle">
-                {stats.overview?.currentYearAssignments || 0}
-              </div>
-            </div>
-            <div className="stats-info">
-              <p className="stats-title">This Year</p>
-              <p className="stats-subtitle">
-                Assignments in current academic year
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="stats-card">
-          <div className="stats-header">
-            <h3>Semester {filters.semester}</h3>
-          </div>
-          <div className="stats-content">
-            <div className="stats-icon">
-              <div className="icon-circle">
-                {stats.bySemester?.find(s => s.semester === parseInt(filters.semester))?.count || 0}
-              </div>
-            </div>
-            <div className="stats-info">
-              <p className="stats-title">Current Semester</p>
-              <p className="stats-subtitle">
-                For selected semester {filters.semester}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Assignments Table */}
-      <div className="card">
-        <div className="card-header">
-          <h2>
-            Current Assignments ({assignments.length})
-          </h2>
-        </div>
-        
-        <div className="card-body">
-          {assignments.length === 0 ? (
-            <div className="alert alert-info">
-              <h3>No Assignments Found</h3>
-              <p>
-                No faculty assignments found for the selected filters.
-              </p>
-              <p>
-                <button 
-                  className="btn btn-primary btn-sm" 
-                  onClick={() => setFilters({ year: new Date().getFullYear(), semester: 1 })}
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <FiX className="text-red-600" />
+                  <h3 className="font-semibold text-gray-900">Error Loading Data</h3>
+                </div>
+                <p className="text-gray-700 mb-3 text-sm">{error}</p>
+                <button
+                  onClick={loadAllData}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
                 >
-                  Reset Filters
+                  Retry
                 </button>
-              </p>
+              </div>
+            )}
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FiFilter className="text-gray-600" />
+              Filter Assignments
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {/* Semester Type Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Semester Type
+                </label>
+                <select
+                  name="semesterType"
+                  value={filters.semesterType}
+                  onChange={handleFilterChange}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Types</option>
+                  <option value="even">Even Semesters</option>
+                  <option value="odd">Odd Semesters</option>
+                </select>
+              </div>
+
+              {/* Specific Semester Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specific Semester
+                </label>
+                <select
+                  name="semester"
+                  value={filters.semester}
+                  onChange={handleFilterChange}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Semesters</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                    <option key={sem} value={sem}>
+                      Semester {sem}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Year Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Year
+                </label>
+                <select
+                  name="year"
+                  value={filters.year}
+                  onChange={handleFilterChange}
+                  className="w-full p-3 text-sm border border-gray-300 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                >
+                  {[2022, 2023, 2024, 2025, 2026, 2027].map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Apply Button */}
+              <div className="flex items-end">
+                <button 
+                  onClick={loadAllData}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-medium text-sm shadow-sm hover:shadow"
+                >
+                  Apply Filters
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="table-responsive">
-              <table className="table">
-                <thead>
+
+            {/* Active Filters Display */}
+            {(filters.semesterType || filters.semester || filters.year !== new Date().getFullYear()) && (
+              <div className="mt-6 pt-5 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-gray-600 mb-3">
+                  <FiFilter className="w-4 h-4" />
+                  <span className="font-medium text-sm">Active Filters:</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {filters.semesterType && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm border border-blue-200">
+                      {filters.semesterType === "even" ? "Even Semesters" : "Odd Semesters"}
+                      <button
+                        onClick={() => clearFilter("semesterType")}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filters.semester && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm border border-purple-200">
+                      Semester {filters.semester}
+                      <button
+                        onClick={() => clearFilter("semester")}
+                        className="ml-1 text-purple-600 hover:text-purple-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filters.year !== new Date().getFullYear() && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm border border-gray-300">
+                      Year: {filters.year}
+                      <button
+                        onClick={() => setFilters(prev => ({ ...prev, year: new Date().getFullYear() }))}
+                        className="ml-1 text-gray-600 hover:text-gray-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-sm text-gray-600 hover:text-gray-800 underline ml-2"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Assignments Table */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FiBook className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Course Assignments</h2>
+                  <p className="text-sm text-gray-600">
+                    List of faculty assignments across the department
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white px-4 py-2 rounded-lg border border-gray-200">
+                <span className="text-sm font-medium text-gray-900">
+                  {assignments.length} {assignments.length === 1 ? 'assignment' : 'assignments'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            {assignments.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="text-gray-300 mb-4">
+                  <FiBook className="w-12 h-12 mx-auto" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Assignments Found</h3>
+                <p className="text-gray-600 mb-6 text-sm">
+                  No faculty assignments found for the selected filters.
+                </p>
+                <button
+                  onClick={clearAllFilters}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-medium text-sm shadow-sm hover:shadow"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th>Course Code</th>
-                    <th>Course Name</th>
-                    <th>Faculty</th>
-                    <th>Semester</th>
-                    <th>Year</th>
-                    <th>Credits</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Course</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Faculty</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Semester</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Year</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Credits</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200">
                   {assignments.map((assignment, index) => (
-                    <tr key={assignment.id || index}>
-                      <td>
-                        <div className="faculty-info">
-                          <span className="icon">📚</span>
-                          <span>{assignment.course?.code || 'N/A'}</span>
+                    <tr 
+                      key={assignment.id || index} 
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      {/* Course Information - Name on top, code below */}
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm mb-1">
+                            {assignment.course?.name || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {assignment.course?.code || 'N/A'}
+                          </div>
                         </div>
                       </td>
-                      <td>{assignment.course?.name || 'N/A'}</td>
-                      <td>
-                        <div className="faculty-info">
-                          <span className="icon">👤</span>
-                          <span>{assignment.faculty?.name || 'N/A'}</span>
+
+                      {/* Faculty Information */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-50 to-green-100 flex items-center justify-center border border-green-200">
+                            <FiUser className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">
+                              {assignment.faculty?.name || 'N/A'}
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                              <FiMail className="w-3 h-3" />
+                              {assignment.faculty?.user?.email || assignment.faculty?.email || 'N/A'}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td>
-                        <span className="chip chip-primary">
-                          Semester {assignment.semester}
-                        </span>
+
+                      {/* Semester - Only number */}
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900 text-base">
+                          {assignment.semester || 'N/A'}
+                        </div>
                       </td>
-                      <td>{assignment.year}</td>
-                      <td>
-                        <span className="chip chip-secondary">
-                          {assignment.course?.credits || 'N/A'} credits
-                        </span>
+
+                      {/* Year */}
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900 text-sm">
+                          {assignment.year}
+                        </div>
+                      </td>
+
+                      {/* Credits - Simple number without decoration */}
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900 text-base">
+                          {assignment.course?.credits || 'N/A'}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Top Sections */}
-      <div className="stats-grid">
-        {/* Top Faculties */}
-        {stats.topFaculties && stats.topFaculties.length > 0 && (
-          <div className="stats-card">
-            <div className="stats-header">
-              <h3>Top Faculties by Assignments</h3>
-            </div>
-            <div className="stats-content">
-              <div className="top-list">
-                {stats.topFaculties.map((faculty, index) => (
-                  <div key={faculty.facultyId} className="top-item">
-                    <span className="rank">{index + 1}</span>
-                    <div className="item-details">
-                      <strong>{faculty.name}</strong>
-                      <span>{faculty.designation || 'Faculty'}</span>
-                    </div>
-                    <div className="item-count">
-                      {faculty.assignmentCount} assignment(s)
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Top Courses */}
-        {stats.topCourses && stats.topCourses.length > 0 && (
-          <div className="stats-card">
-            <div className="stats-header">
-              <h3>Courses with Most Faculty</h3>
-            </div>
-            <div className="stats-content">
-              <div className="top-list">
-                {stats.topCourses.map((course, index) => (
-                  <div key={course.courseId} className="top-item">
-                    <span className="rank">{index + 1}</span>
-                    <div className="item-details">
-                      <strong>{course.code}</strong>
-                      <span>{course.name}</span>
-                    </div>
-                    <div className="item-count">
-                      {course.facultyCount} faculty
-                    </div>
-                  </div>
-                ))}
+        {/* Table Footer Info */}
+        {assignments.length > 0 && (
+          <div className="mt-6 px-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Showing {assignments.length} assignments
+                {filters.semesterType && ` in ${filters.semesterType === 'even' ? 'Even' : 'Odd'} Semesters`}
+                {filters.semester && ` for Semester ${filters.semester}`}
+                {filters.year !== new Date().getFullYear() && ` in ${filters.year}`}
+              </p>
+              
+              {/* Simple Pagination */}
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <FiChevronLeft className="w-4 h-4 text-gray-600" />
+                </button>
+                <span className="text-sm text-gray-600">1 of 1</span>
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <FiChevronRight className="w-4 h-4 text-gray-600" />
+                </button>
               </div>
             </div>
           </div>
@@ -376,489 +458,5 @@ const AssignmentsDashboard = () => {
     </div>
   );
 };
-
-// Add CSS styles
-const styles = `
-.dashboard-container {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-/* Header */
-.header {
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.header h1 {
-  font-size: 28px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #2c3e50;
-}
-
-.header-icon {
-  font-size: 28px;
-}
-
-.subtitle {
-  color: #666;
-  margin-bottom: 20px;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: flex-start;
-  margin-top: 20px;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  margin-left: auto;
-}
-
-/* Buttons */
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.btn-primary {
-  background-color: #3498db;
-  color: white;
-  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #2980b9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
-}
-
-.btn-primary:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: #7f8c8d;
-  transform: translateY(-1px);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-/* Form Elements */
-.form-group {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #34495e;
-  font-size: 14px;
-}
-
-.filter-select {
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  min-width: 150px;
-  background-color: white;
-  transition: border-color 0.2s;
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-/* Cards */
-.card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #eee;
-  background-color: #f8f9fa;
-}
-
-.card-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: #2c3e50;
-}
-
-.card-body {
-  padding: 24px;
-}
-
-/* Alerts */
-.alert {
-  padding: 16px 20px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  border-left: 4px solid;
-}
-
-.alert-info {
-  background-color: #e8f4fd;
-  border-color: #3498db;
-  color: #2c3e50;
-}
-
-.alert-error {
-  background-color: #fdeaea;
-  border-color: #e74c3c;
-  color: #c0392b;
-}
-
-.alert h3 {
-  margin-top: 0;
-  margin-bottom: 8px;
-  font-size: 18px;
-}
-
-.alert-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-/* Table */
-.table-responsive {
-  overflow-x: auto;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.table th {
-  background-color: #f8f9fa;
-  padding: 14px 16px;
-  text-align: left;
-  font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #dee2e6;
-  white-space: nowrap;
-}
-
-.table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid #e0e0e0;
-  vertical-align: middle;
-}
-
-.table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.faculty-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.icon {
-  font-size: 16px;
-  opacity: 0.7;
-}
-
-/* Chips */
-.chip {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.chip-primary {
-  background-color: #e8f4fd;
-  color: #2980b9;
-  border: 1px solid #b3d7ff;
-}
-
-.chip-secondary {
-  background-color: #f0e8ff;
-  color: #6c3483;
-  border: 1px solid #d2b4de;
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.stats-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-}
-
-.stats-header {
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
-}
-
-.stats-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: #2c3e50;
-}
-
-.stats-content {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.stats-icon {
-  flex-shrink: 0;
-}
-
-.icon-circle {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.stats-info {
-  flex: 1;
-}
-
-.stats-title {
-  font-size: 16px;
-  font-weight: 500;
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-}
-
-.stats-subtitle {
-  font-size: 14px;
-  color: #7f8c8d;
-  margin: 0;
-  line-height: 1.4;
-}
-
-/* Top Lists */
-.top-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.top-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  gap: 15px;
-}
-
-.rank {
-  background: #0366d6;
-  color: white;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.item-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.item-details strong {
-  display: block;
-  margin-bottom: 2px;
-  color: #24292e;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.item-details span {
-  font-size: 12px;
-  color: #586069;
-}
-
-.item-count {
-  font-weight: 600;
-  color: #24292e;
-  flex-shrink: 0;
-}
-
-/* Loading */
-.loading-spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 20px;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 16px;
-  }
-  
-  .header h1 {
-    font-size: 24px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-  
-  .filters {
-    margin-left: 0;
-    width: 100%;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .filters .form-group {
-    width: 100%;
-  }
-  
-  .filter-select {
-    width: 100%;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .stats-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .icon-circle {
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
-  }
-  
-  .table-responsive {
-    font-size: 13px;
-  }
-  
-  .table th,
-  .table td {
-    padding: 10px 12px;
-  }
-  
-  .top-item {
-    flex-wrap: wrap;
-  }
-}
-
-@media (max-width: 480px) {
-  .item-details {
-    min-width: 150px;
-  }
-  
-  .item-count {
-    width: 100%;
-    text-align: right;
-  }
-}
-`;
-
-// Add the styles to the document
-const styleSheet = document.createElement("style");
-styleSheet.textContent = styles;
-document.head.appendChild(styleSheet);
 
 export default AssignmentsDashboard;

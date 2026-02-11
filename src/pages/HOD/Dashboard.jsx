@@ -203,9 +203,11 @@ export default function Dashboard() {
               </span>
               !
             </h1>
+            {/*
             <p className="text-gray-600 mt-2 text-base md:text-lg">
               Department of <span className="font-semibold text-gray-800">{user?.department?.name}</span>
             </p>
+            */}
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">Last Updated</div>
