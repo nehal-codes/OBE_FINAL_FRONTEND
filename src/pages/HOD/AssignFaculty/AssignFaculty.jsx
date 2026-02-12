@@ -22,6 +22,7 @@ import {
   FiUsers,
   FiAward,
   FiChevronRight,
+  FiDivide,
 } from 'react-icons/fi';
 
 const AssignFaculty = () => {
@@ -46,6 +47,7 @@ const AssignFaculty = () => {
   
   const [filters, setFilters] = useState({
     semester: '',
+    semesterType: '',
     year: new Date().getFullYear(),
   });
   
@@ -90,7 +92,7 @@ const AssignFaculty = () => {
     }
   };
 
-  // Fetch assignments
+  // Fetch assignments with even/odd filtering
   const fetchAssignments = async () => {
     try {
       console.log("🔄 Fetching assignments for:", {
@@ -118,7 +120,23 @@ const AssignFaculty = () => {
       }
       
       console.log("📊 Processed assignments data:", assignmentsData);
-      setAssignments(assignmentsData);
+      
+      // Apply semester type filter (even/odd) if selected
+      let filteredData = assignmentsData;
+      if (filters.semesterType) {
+        filteredData = assignmentsData.filter(assignment => {
+          if (!assignment.semester) return false;
+          const semesterNum = parseInt(assignment.semester);
+          if (filters.semesterType === 'even') {
+            return semesterNum % 2 === 0;
+          } else if (filters.semesterType === 'odd') {
+            return semesterNum % 2 === 1;
+          }
+          return true;
+        });
+      }
+      
+      setAssignments(filteredData);
       
     } catch (error) {
       console.error("❌ Error fetching assignments:", error);
@@ -218,7 +236,7 @@ const AssignFaculty = () => {
       console.log("🔍 Filters changed, refetching assignments...");
       fetchAssignments();
     }
-  }, [filters.semester, filters.year]);
+  }, [filters.semester, filters.year, filters.semesterType]);
 
   // Refetch available faculties when semester/year changes
   useEffect(() => {
@@ -497,9 +515,9 @@ const AssignFaculty = () => {
   }
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
-      <div className="mb-10">
+      <div className="mb-8">
         <button
           onClick={() => window.history.back()}
           className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:text-gray-900 hover:bg-white rounded-xl transition-colors mb-8 text-lg font-medium"
@@ -508,23 +526,19 @@ const AssignFaculty = () => {
           <span>Back to Courses</span>
         </button>
 
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 md:p-10 text-white mb-8">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="p-3 bg-white/20 rounded-xl">
                   <FiUsers className="text-3xl" />
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold">Faculty Assignment</h1>
+                <h1 className="text-3xl font-bold">Faculty Assignment</h1>
               </div>
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl text-lg">
-                  <FiBook className="text-xl" />
-                  <span className="font-semibold">{course.code} - {course.name}</span>
-                </div>
-                <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl text-lg">
-                  <FiAward className="text-xl" />
-                  <span>{course.credits || 0} credits • {course.type || 'N/A'}</span>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="bg-white/10 px-5 py-3 rounded-xl">
+                  <div className="font-bold text-lg mb-1">{course.name}</div>
+                  <div className="text-sm opacity-90">{course.code} • {course.credits || 0} credits • {course.type || 'N/A'}</div>
                 </div>
               </div>
             </div>
@@ -532,32 +546,51 @@ const AssignFaculty = () => {
             <button
               onClick={handleOpenDialog}
               disabled={loading.assignments}
-              className="flex items-center justify-center gap-3 px-7 py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed text-lg"
+              className="flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-200 font-medium text-lg"
             >
               <FiPlus className="text-xl" />
-              <span className="font-bold">Assign New Faculty</span>
+              <span>Assign New Faculty</span>
             </button>
           </div>
         </div>
 
-        {/* Filters - Increased size */}
-        <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
-            <FiFilter className="text-gray-600 text-xl" />
+        {/* Filters */}
+        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-3">
+            <FiFilter className="text-gray-600 text-lg" />
             Filter Assignments
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+            {/* Semester Type Filter */}
             <div>
-              <label className="block text-lg font-medium text-gray-800 mb-3">
-                <FiCalendar className="inline mr-3 text-gray-600" />
-                Filter by Semester
+              <label className="text-base font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <FiDivide className="w-5 h-5" />
+                Semester Type
+              </label>
+              <select
+                name="semesterType"
+                value={filters.semesterType}
+                onChange={handleFilterChange}
+                className="w-full p-3 text-base border border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Types</option>
+                <option value="even">Even Semesters</option>
+                <option value="odd">Odd Semesters</option>
+              </select>
+            </div>
+
+            {/* Specific Semester Filter */}
+            <div>
+              <label className="text-base font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <FiFilter className="w-5 h-5" />
+                Specific Semester
               </label>
               <select
                 name="semester"
                 value={filters.semester}
                 onChange={handleFilterChange}
                 disabled={loading.assignments}
-                className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl bg-white focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                className="w-full p-3 text-base border border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Semesters</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
@@ -568,9 +601,10 @@ const AssignFaculty = () => {
               </select>
             </div>
 
+            {/* Year Filter */}
             <div>
-              <label className="block text-lg font-medium text-gray-800 mb-3">
-                <FiCalendar className="inline mr-3 text-gray-600" />
+              <label className="text-base font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <FiCalendar className="w-5 h-5" />
                 Filter by Year
               </label>
               <select
@@ -578,7 +612,7 @@ const AssignFaculty = () => {
                 value={filters.year}
                 onChange={handleFilterChange}
                 disabled={loading.assignments}
-                className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl bg-white focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                className="w-full p-3 text-base border border-gray-300 rounded-lg bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               >
                 {[2022, 2023, 2024, 2025, 2026, 2027].map((year) => (
                   <option key={year} value={year}>
@@ -588,205 +622,204 @@ const AssignFaculty = () => {
               </select>
             </div>
 
+            {/* Refresh Button */}
             <div className="flex items-end">
               <button 
                 onClick={fetchAssignments}
                 disabled={loading.assignments}
-                className="flex items-center justify-center gap-3 w-full px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-3 w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-base disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <FiRefreshCw className={`text-xl ${loading.assignments ? 'animate-spin' : ''}`} />
-                <span>{loading.assignments ? 'Refreshing...' : 'Refresh Assignments'}</span>
+                <FiRefreshCw className={`text-lg ${loading.assignments ? 'animate-spin' : ''}`} />
+                <span>{loading.assignments ? 'Refreshing...' : 'Refresh'}</span>
               </button>
             </div>
           </div>
+
+          {/* Active Filters Display */}
+          {(filters.semesterType || filters.semester || filters.year !== new Date().getFullYear()) && (
+            <div className="mt-5 pt-5 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-gray-600 mb-3">
+                <FiFilter className="w-5 h-5" />
+                <span className="font-medium">Active Filters:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {filters.semesterType && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    {filters.semesterType === "even" ? "Even Semesters" : "Odd Semesters"}
+                    <button
+                      onClick={() => setFilters(prev => ({ ...prev, semesterType: "" }))}
+                      className="ml-1 text-blue-600 hover:text-blue-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.semester && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm">
+                    Semester {filters.semester}
+                    <button
+                      onClick={() => setFilters(prev => ({ ...prev, semester: "" }))}
+                      className="ml-1 text-purple-600 hover:text-purple-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.year !== new Date().getFullYear() && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-sm">
+                    Year: {filters.year}
+                    <button
+                      onClick={() => setFilters(prev => ({ ...prev, year: new Date().getFullYear() }))}
+                      className="ml-1 text-gray-600 hover:text-gray-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setFilters({
+                      semester: '',
+                      semesterType: '',
+                      year: new Date().getFullYear(),
+                    });
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Stats Summary - Increased size */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border-2 border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg text-blue-800 font-semibold mb-2">Department Faculty</p>
-              <p className="text-3xl font-bold text-gray-900">{faculties.length}</p>
-            </div>
-            <FiUsers className="text-blue-600 text-3xl" />
-          </div>
-          <p className="text-base text-gray-700 mt-3">
-            {availableFaculties.length} available for current filters
-          </p>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border-2 border-emerald-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg text-emerald-800 font-semibold mb-2">Current Assignments</p>
-              <p className="text-3xl font-bold text-gray-900">{assignments.length}</p>
-            </div>
-            <FiCheckCircle className="text-emerald-600 text-3xl" />
-          </div>
-          <p className="text-base text-gray-700 mt-3">
-            {filters.semester ? getSemesterLabel(filters.semester) : 'All semesters'} • {filters.year}
-          </p>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 border-2 border-amber-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg text-amber-800 font-semibold mb-2">Course Credits</p>
-              <p className="text-3xl font-bold text-gray-900">{course.credits || 0}</p>
-            </div>
-            <FiAward className="text-amber-600 text-3xl" />
-          </div>
-          <p className="text-base text-gray-700 mt-3">
-            {course.type || 'No type'} • Semester {course.semester || 'N/A'}
-          </p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border-2 border-purple-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg text-purple-800 font-semibold mb-2">Course Status</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {course.isActive ? 'Active' : 'Inactive'}
-              </p>
-            </div>
-            <FiBarChart2 className="text-purple-600 text-3xl" />
-          </div>
-          <div className={`text-base font-semibold mt-3 px-3 py-2 rounded-full inline-block ${course.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`}>
-            {course.isActive ? 'Available for assignment' : 'Not available'}
-          </div>
-        </div>
-      </div>
-
-      {/* Assignments Table - Increased size */}
-      <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden shadow-xl mb-10">
-        <div className="p-7 border-b-2 border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100/50">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <FiClock className="text-gray-600 text-2xl" />
+      {/* Assignments Table */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-8">
+        <div className="p-5 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+            <FiClock className="text-gray-600 text-lg" />
             Faculty Assignments
-            <span className="text-lg font-normal text-gray-600 ml-3">
+            <span className="text-base font-normal text-gray-600 ml-2">
               ({assignments.length} assigned)
             </span>
           </h2>
         </div>
 
         {loading.assignments ? (
-          <div className="p-14 text-center">
-            <div className="inline-block animate-spin rounded-full h-14 w-14 border-b-3 border-blue-600 mb-6"></div>
-            <p className="text-gray-600 text-lg">Loading assignments...</p>
+          <div className="p-16 text-center">
+            <div className="inline-block animate-spin rounded-full h-14 w-14 border-t-3 border-b-3 border-blue-600 mb-4"></div>
+            <p className="text-lg text-gray-600">Loading assignments...</p>
           </div>
         ) : assignments.length === 0 ? (
-          <div className="p-14 text-center">
+          <div className="p-16 text-center">
             <div className="text-gray-400 mb-6">
-              <FiUsers className="w-20 h-20 mx-auto" />
+              <FiUsers className="w-16 h-16 mx-auto" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">No Faculty Assigned</h3>
-            <p className="text-gray-700 text-lg max-w-md mx-auto mb-8">
-              {filters.semester || filters.year 
-                ? `No faculty assignments found for ${filters.semester ? getSemesterLabel(filters.semester) : ''} ${filters.year}`
+            <h3 className="text-xl font-medium text-gray-900 mb-3">No Faculty Assigned</h3>
+            <p className="text-lg text-gray-600 max-w-md mx-auto mb-8">
+              {filters.semester || filters.year || filters.semesterType
+                ? `No faculty assignments found for the selected filters`
                 : `No faculty assigned to ${course.code} yet`}
             </p>
             <button 
               onClick={handleOpenDialog}
-              className="flex items-center gap-3 mx-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all text-lg font-semibold"
+              className="inline-flex items-center gap-3 px-6 py-3.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg"
             >
-              <FiPlus className="text-xl" />
+              <FiPlus className="w-6 h-6" />
               <span>Assign First Faculty</span>
             </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="py-5 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
-                    Faculty Information
-                  </th>
-                  <th className="py-5 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
-                    Academic Year
-                  </th>
-                  <th className="py-5 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
-                    Teaching Details
-                  </th>
-                  <th className="py-5 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
-                    Actions
-                  </th>
+                  <th className="p-5 text-left font-semibold text-gray-700 text-lg">Faculty Information</th>
+                  <th className="p-5 text-left font-semibold text-gray-700 text-lg">Academic Year</th>
+                  <th className="p-5 text-left font-semibold text-gray-700 text-lg">Teaching Details</th>
+                  <th className="p-5 text-left font-semibold text-gray-700 text-lg">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {assignments.map((assignment, index) => (
-                  <tr key={`${assignment.facultyId || index}-${assignment.semester}-${assignment.year}`} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-5 px-7">
+                  <tr 
+                    key={`${assignment.facultyId || index}-${assignment.semester}-${assignment.year}`} 
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    {/* Faculty Information */}
+                    <td className="p-5">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                          <FiUser className="text-blue-600 text-xl" />
+                          <FiUser className="text-blue-600 text-lg" />
                         </div>
                         <div>
                           <div className="font-semibold text-gray-900 text-lg">
                             {assignment.faculty?.name || assignment.facultyName || `Faculty ${assignment.facultyId?.substring(0, 8) || 'Unknown'}`}
                           </div>
-                          <div className="text-base text-gray-700 flex items-center gap-3 mt-1">
-                            <FiMail className="text-gray-500" />
+                          <div className="text-base text-gray-600 flex items-center gap-2 mt-1">
+                            <FiMail className="text-gray-500 text-sm" />
                             {assignment.faculty?.user?.email || assignment.facultyEmail || 'N/A'}
                           </div>
-                          <div className="text-sm text-gray-600 mt-2">
+                          <div className="text-sm text-gray-500 mt-2">
                             {assignment.faculty?.designation || 'No designation'}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-5 px-7">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
-                          <span className="font-bold text-emerald-800 text-lg">
-                            {assignment.semester}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-semibold text-gray-900 text-lg">{getSemesterLabel(assignment.semester)}</div>
-                          <div className="text-base text-gray-700">{assignment.year}</div>
-                        </div>
+
+                    {/* Academic Year */}
+                    <td className="p-5">
+                      <div>
+                        <div className="font-medium text-gray-900 text-lg">{assignment.semester}</div>
+                        <div className="text-base text-gray-600">{assignment.year}</div>
                       </div>
                     </td>
-                    <td className="py-5 px-7">
-                      <div className="space-y-3">
+
+                    {/* Teaching Details */}
+                    <td className="p-5">
+                      <div className="space-y-2">
                         <div>
-                          <div className="text-base text-gray-600 mb-2">Teaching Methodology</div>
-                          <span className={`inline-flex items-center px-4 py-2 rounded-full text-base font-medium ${assignment.teachingMethodology ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'}`}>
+                          <div className="text-base text-gray-600 mb-1">Teaching Methodology</div>
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${assignment.teachingMethodology ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'}`}>
                             {assignment.teachingMethodology || 'Not specified'}
                           </span>
                         </div>
                         <div>
-                          <div className="text-base text-gray-600 mb-2">Assessment Mode</div>
-                          <span className={`inline-flex items-center px-4 py-2 rounded-full text-base font-medium ${assignment.assessmentMode ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                          <div className="text-base text-gray-600 mb-1">Assessment Mode</div>
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${assignment.assessmentMode ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
                             {assignment.assessmentMode || 'Not specified'}
                           </span>
                         </div>
                       </div>
                     </td>
-                    <td className="py-5 px-7">
-                      <div className="flex items-center gap-3">
+
+                    {/* Actions */}
+                    <td className="p-5">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleViewWorkload(assignment.faculty)}
-                          className="p-3 rounded-xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-gray-600 hover:text-gray-700 hover:bg-gray-100 transition-colors text-base"
                           title="View Workload"
                         >
-                          <FiEye className="text-xl" />
+                          <FiEye className="w-5 h-5" />
+                          <span>View</span>
                         </button>
                         <button
                           onClick={() => handleUpdateAssignment(assignment)}
-                          className="p-3 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors text-base"
                           title="Edit Assignment"
                         >
-                          <FiEdit2 className="text-xl" />
+                          <FiEdit2 className="w-5 h-5" />
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => handleRemoveAssignment(assignment)}
-                          className="p-3 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors text-base"
                           title="Remove Assignment"
                         >
-                          <FiTrash2 className="text-xl" />
+                          <FiTrash2 className="w-5 h-5" />
+                          <span>Remove</span>
                         </button>
                       </div>
                     </td>
@@ -798,38 +831,50 @@ const AssignFaculty = () => {
         )}
       </div>
 
-      {/* Assign Faculty Modal - Increased size */}
+      {/* Table Footer Info */}
+      {assignments.length > 0 && (
+        <div className="mt-6 px-2">
+          <p className="text-base text-gray-600">
+            Showing <span className="font-semibold">{assignments.length}</span> assignments
+            {filters.semesterType && ` in ${filters.semesterType === 'even' ? 'Even' : 'Odd'} Semesters`}
+            {filters.semester && ` for Semester ${filters.semester}`}
+            {filters.year !== new Date().getFullYear() && ` in ${filters.year}`}
+          </p>
+        </div>
+      )}
+
+      {/* Assign Faculty Modal */}
       {openDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl w-full max-w-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 rounded-t-lg">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <FiPlus className="text-white text-2xl" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <FiPlus className="text-white text-lg" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Assign Faculty to Course</h2>
-                    <p className="text-blue-100 text-lg">
+                    <h2 className="text-xl font-bold text-white">Assign Faculty to Course</h2>
+                    <p className="text-blue-100 text-sm">
                       {course.code} - {course.name}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleCloseDialog}
-                  className="p-3 hover:bg-white/20 rounded-xl transition-colors"
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 >
-                  <FiXCircle className="text-white text-2xl" />
+                  <FiXCircle className="text-white text-lg" />
                 </button>
               </div>
             </div>
 
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-96px)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6">
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-lg font-semibold text-gray-800 mb-3">
-                      <FiCalendar className="inline mr-3 text-gray-600 text-xl" />
+                    <label className="block text-base font-medium text-gray-700 mb-2">
+                      <FiCalendar className="inline mr-2 text-gray-600" />
                       Academic Year
                     </label>
                     <select
@@ -837,7 +882,7 @@ const AssignFaculty = () => {
                       value={formData.year}
                       onChange={handleFormChange}
                       required
-                      className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      className="w-full p-3 text-base border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                     >
                       {[2022, 2023, 2024, 2025, 2026, 2027].map((year) => (
                         <option key={year} value={year}>
@@ -848,8 +893,8 @@ const AssignFaculty = () => {
                   </div>
 
                   <div>
-                    <label className="block text-lg font-semibold text-gray-800 mb-3">
-                      <FiCalendar className="inline mr-3 text-gray-600 text-xl" />
+                    <label className="block text-base font-medium text-gray-700 mb-2">
+                      <FiCalendar className="inline mr-2 text-gray-600" />
                       Semester
                     </label>
                     <select
@@ -857,7 +902,7 @@ const AssignFaculty = () => {
                       value={formData.semester}
                       onChange={handleFormChange}
                       required
-                      className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      className="w-full p-3 text-base border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Semester</option>
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
@@ -867,7 +912,7 @@ const AssignFaculty = () => {
                       ))}
                     </select>
                     {course.semester && !formData.semester && (
-                      <p className="text-base text-gray-600 mt-2">
+                      <p className="text-sm text-gray-600 mt-2">
                         Course is typically taught in {getSemesterLabel(course.semester)}
                       </p>
                     )}
@@ -875,47 +920,42 @@ const AssignFaculty = () => {
                 </div>
 
                 <div>
-                  <label className="block text-lg font-semibold text-gray-800 mb-3">
-                    <FiUser className="inline mr-3 text-gray-600 text-xl" />
+                  <label className="block text-base font-medium text-gray-700 mb-2">
+                    <FiUser className="inline mr-2 text-gray-600" />
                     Select Faculty
                   </label>
-                  <div className="relative">
-                    <select
-                      name="facultyId"
-                      value={formData.facultyId}
-                      onChange={handleFormChange}
-                      required
-                      disabled={!formData.semester || !formData.year}
-                      className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Select Faculty</option>
-                      {availableFaculties.length === 0 ? (
-                        <option value="" disabled>
-                          {!formData.semester || !formData.year 
-                            ? 'Please select semester and year first' 
-                            : 'No available faculty found'}
+                  <select
+                    name="facultyId"
+                    value={formData.facultyId}
+                    onChange={handleFormChange}
+                    required
+                    disabled={!formData.semester || !formData.year}
+                    className="w-full p-3 text-base border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Faculty</option>
+                    {availableFaculties.length === 0 ? (
+                      <option value="" disabled>
+                        {!formData.semester || !formData.year 
+                          ? 'Please select semester and year first' 
+                          : 'No available faculty found'}
+                      </option>
+                    ) : (
+                      availableFaculties.map((faculty) => (
+                        <option key={faculty.id} value={faculty.id}>
+                          {faculty.name} • {faculty.designation || 'No designation'}
                         </option>
-                      ) : (
-                        availableFaculties.map((faculty) => (
-                          <option key={faculty.id} value={faculty.id}>
-                            {faculty.name} • {faculty.designation || 'No designation'}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                      <FiChevronRight className="text-gray-500 text-xl" />
-                    </div>
-                  </div>
+                      ))
+                    )}
+                  </select>
                   {formData.semester && formData.year && (
-                    <p className="text-base text-gray-600 mt-3">
+                    <p className="text-sm text-gray-600 mt-2">
                       {availableFaculties.length} faculty member(s) available for {getSemesterLabel(formData.semester)} {formData.year}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  <label className="block text-base font-medium text-gray-700 mb-2">
                     Teaching Methodology (Optional)
                   </label>
                   <input
@@ -924,12 +964,12 @@ const AssignFaculty = () => {
                     value={formData.teachingMethodology}
                     onChange={handleFormChange}
                     placeholder="e.g., Lecture-based, Flipped Classroom, Lab Sessions, etc."
-                    className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full p-3 text-base border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  <label className="block text-base font-medium text-gray-700 mb-2">
                     Assessment Mode (Optional)
                   </label>
                   <input
@@ -938,26 +978,26 @@ const AssignFaculty = () => {
                     value={formData.assessmentMode}
                     onChange={handleFormChange}
                     placeholder="e.g., Continuous Assessment, Final Exam, Project-based, etc."
-                    className="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full p-3 text-base border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="p-8 border-t-2 border-gray-200 bg-gray-50/50">
-              <div className="flex justify-end gap-4">
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-end gap-3">
                 <button
                   onClick={handleCloseDialog}
-                  className="px-7 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-lg"
+                  className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-base"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmitAssignment}
                   disabled={!formData.facultyId || !formData.semester || !formData.year}
-                  className="flex items-center gap-3 px-9 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed font-semibold text-lg"
+                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-base disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <FiSave className="text-xl" />
+                  <FiSave className="text-lg" />
                   <span>Assign Faculty</span>
                 </button>
               </div>
@@ -966,33 +1006,33 @@ const AssignFaculty = () => {
         </div>
       )}
 
-      {/* Faculty Workload Modal - Increased size */}
+      {/* Faculty Workload Modal */}
       {openWorkloadDialog && selectedFaculty && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-8 py-6">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <FiBarChart2 className="text-white text-2xl" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <FiBarChart2 className="text-white text-lg" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Faculty Workload Details</h2>
-                    <p className="text-emerald-100 text-lg">
+                    <h2 className="text-xl font-bold text-white">Faculty Workload Details</h2>
+                    <p className="text-emerald-100 text-sm">
                       {selectedFaculty.name} • {selectedFaculty.designation || 'No designation'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setOpenWorkloadDialog(false)}
-                  className="p-3 hover:bg-white/20 rounded-xl transition-colors"
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 >
-                  <FiXCircle className="text-white text-2xl" />
+                  <FiXCircle className="text-white text-lg" />
                 </button>
               </div>
             </div>
 
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-96px)]">
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-72px)]">
               <FacultyWorkload faculty={selectedFaculty} />
             </div>
           </div>
@@ -1002,7 +1042,7 @@ const AssignFaculty = () => {
   );
 };
 
-// Faculty Workload Component - Increased size
+// Faculty Workload Component
 const FacultyWorkload = ({ faculty }) => {
   const [workload, setWorkload] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1048,53 +1088,53 @@ const FacultyWorkload = ({ faculty }) => {
 
   if (loading) {
     return (
-      <div className="py-14 text-center">
-        <div className="inline-block animate-spin rounded-full h-14 w-14 border-b-3 border-emerald-600 mb-6"></div>
-        <p className="text-gray-600 text-lg">Loading faculty workload...</p>
+      <div className="py-10 text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600 mb-4"></div>
+        <p className="text-base text-gray-600">Loading faculty workload...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <FiXCircle className="text-red-600 text-2xl" />
-          <h3 className="text-xl font-semibold text-gray-900">Error Loading Data</h3>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <FiXCircle className="text-red-600 text-lg" />
+          <h3 className="text-lg font-semibold text-gray-900">Error Loading Data</h3>
         </div>
-        <p className="text-gray-700 text-lg">{error}</p>
+        <p className="text-gray-700 text-base">{error}</p>
       </div>
     );
   }
 
   if (!workload) {
     return (
-      <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <FiBarChart2 className="text-gray-600 text-2xl" />
-          <h3 className="text-xl font-semibold text-gray-900">No Workload Data Available</h3>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <FiBarChart2 className="text-gray-600 text-lg" />
+          <h3 className="text-lg font-semibold text-gray-900">No Workload Data Available</h3>
         </div>
-        <p className="text-gray-700 text-lg">No workload data available for this faculty member.</p>
+        <p className="text-gray-700 text-base">No workload data available for this faculty member.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Faculty Info */}
-      <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-7 border-2 border-emerald-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-5 border border-emerald-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
-            <div className="text-lg text-emerald-800 font-semibold mb-2">Name</div>
-            <div className="font-bold text-gray-900 text-xl">{workload.faculty?.name || faculty.name}</div>
+            <div className="text-base text-emerald-800 font-semibold mb-1">Name</div>
+            <div className="font-bold text-gray-900 text-lg">{workload.faculty?.name || faculty.name}</div>
           </div>
           <div>
-            <div className="text-lg text-emerald-800 font-semibold mb-2">Designation</div>
-            <div className="font-bold text-gray-900 text-xl">{workload.faculty?.designation || 'N/A'}</div>
+            <div className="text-base text-emerald-800 font-semibold mb-1">Designation</div>
+            <div className="font-bold text-gray-900 text-lg">{workload.faculty?.designation || 'N/A'}</div>
           </div>
           <div>
-            <div className="text-lg text-emerald-800 font-semibold mb-2">Department</div>
-            <div className="font-bold text-gray-900 text-xl">{workload.faculty?.department || 'N/A'}</div>
+            <div className="text-base text-emerald-800 font-semibold mb-1">Department</div>
+            <div className="font-bold text-gray-900 text-lg">{workload.faculty?.department || 'N/A'}</div>
           </div>
         </div>
       </div>
@@ -1102,35 +1142,35 @@ const FacultyWorkload = ({ faculty }) => {
       {/* Workload Summary */}
       {workload.workloadSummary && workload.workloadSummary.length > 0 && (
         <div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <FiBarChart2 className="text-xl" />
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <FiBarChart2 className="text-lg" />
             Workload Summary
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {workload.workloadSummary.map((summary, index) => (
-              <div key={index} className="bg-white border-2 border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between mb-4">
+              <div key={index} className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <div className="font-bold text-gray-900 text-lg">{summary.year}</div>
-                    <div className="text-base text-gray-700">{getSemesterLabel(summary.semester)}</div>
+                    <div className="font-bold text-gray-900 text-base">{summary.year}</div>
+                    <div className="text-sm text-gray-600">{getSemesterLabel(summary.semester)}</div>
                   </div>
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
-                    <span className="font-bold text-emerald-800 text-xl">{summary.totalCredits || 0}</span>
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
+                    <span className="font-bold text-emerald-800 text-lg">{summary.totalCredits || 0}</span>
                   </div>
                 </div>
-                <div className="text-base text-gray-700 mb-3">
+                <div className="text-sm text-gray-700 mb-3">
                   {summary.courseCount || 0} course(s) assigned
                 </div>
                 {summary.courses && summary.courses.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {summary.courses.slice(0, 3).map((course, idx) => (
-                      <div key={idx} className="text-sm text-gray-800 flex justify-between">
+                      <div key={idx} className="text-xs text-gray-800 flex justify-between">
                         <span className="truncate font-medium">{course.courseCode}</span>
                         <span className="font-bold">{course.credits || 0} cr</span>
                       </div>
                     ))}
                     {summary.courses.length > 3 && (
-                      <div className="text-sm text-gray-600">+{summary.courses.length - 3} more</div>
+                      <div className="text-xs text-gray-600">+{summary.courses.length - 3} more</div>
                     )}
                   </div>
                 )}
@@ -1143,62 +1183,62 @@ const FacultyWorkload = ({ faculty }) => {
       {/* Detailed Assignments */}
       {workload.assignments && workload.assignments.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <FiClock className="text-xl" />
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <FiClock className="text-lg" />
               Course Assignments
             </h3>
-            <button className="flex items-center gap-3 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-lg font-semibold">
-              <FiDownload className="text-xl" />
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+              <FiDownload className="text-base" />
               Export
             </button>
           </div>
-          <div className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-4 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
+                    <th className="py-3 px-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
                       Course Code
                     </th>
-                    <th className="py-4 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
+                    <th className="py-3 px-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
                       Course Name
                     </th>
-                    <th className="py-4 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
+                    <th className="py-3 px-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
                       Year/Semester
                     </th>
-                    <th className="py-4 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
+                    <th className="py-3 px-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
                       Credits
                     </th>
-                    <th className="py-4 px-7 text-left text-lg font-semibold text-gray-800 uppercase tracking-wider border-b-2 border-gray-300">
+                    <th className="py-3 px-5 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
                       Type
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {workload.assignments.map((assignment, index) => (
-                    <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-5 px-7 font-bold text-gray-900 text-lg">
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-5 font-bold text-gray-900 text-base">
                         {assignment.course?.code || 'N/A'}
                       </td>
-                      <td className="py-5 px-7">
-                        <div className="font-semibold text-gray-900 text-lg">{assignment.course?.name || 'N/A'}</div>
+                      <td className="py-4 px-5">
+                        <div className="font-semibold text-gray-900 text-base">{assignment.course?.name || 'N/A'}</div>
                       </td>
-                      <td className="py-5 px-7">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
-                            <span className="text-base font-bold text-emerald-800">{assignment.year}</span>
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 rounded bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
+                            <span className="text-sm font-bold text-emerald-800">{assignment.year}</span>
                           </div>
-                          <span className="text-base text-gray-700 font-medium">{getSemesterLabel(assignment.semester)}</span>
+                          <span className="text-sm text-gray-700 font-medium">{getSemesterLabel(assignment.semester)}</span>
                         </div>
                       </td>
-                      <td className="py-5 px-7">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-                          <span className="font-bold text-blue-800 text-lg">{assignment.course?.credits || 'N/A'}</span>
+                      <td className="py-4 px-5">
+                        <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+                          <span className="font-bold text-blue-800 text-base">{assignment.course?.credits || 'N/A'}</span>
                         </div>
                       </td>
-                      <td className="py-5 px-7">
-                        <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-gray-100 text-gray-800">
+                      <td className="py-4 px-5">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           {assignment.course?.type || 'N/A'}
                         </span>
                       </td>

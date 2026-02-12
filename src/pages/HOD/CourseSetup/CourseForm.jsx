@@ -17,6 +17,9 @@ import {
   FiGrid,
   FiInfo,
   FiAward,
+  FiCreditCard,
+  FiLayers,
+  FiGlobe,
 } from "react-icons/fi";
 
 const CourseForm = ({
@@ -34,7 +37,6 @@ const CourseForm = ({
   const [form, setForm] = useState({
     code: "",
     name: "",
-    slug: "",
     semester: 1,
     credits: 0,
     programmeId: defaultProgrammeId || "",
@@ -63,7 +65,6 @@ const CourseForm = ({
       setForm({
         code: initialData.code || "",
         name: initialData.name || "",
-        slug: initialData.slug || "",
         semester: initialData.semester || 1,
         credits: initialData.credits || 0,
         programmeId: initialData.programme?.id || defaultProgrammeId || "",
@@ -85,7 +86,6 @@ const CourseForm = ({
 
   // persist draft as user types so review can pick it up
   useEffect(() => {
-    // ensure departmentId mirrors selected programme before saving draft
     saveCourseDraft({ ...form, departmentId: form.programmeId });
   }, [form]);
 
@@ -149,7 +149,7 @@ const CourseForm = ({
         res?.data?.id || initialData?.id || res?.data?.course?.id;
       onSaved?.(courseId);
       clearCourseDraft();
-      // if called from review flow, return to the review page with saved data
+      
       const returnTo = location.state?.returnTo;
       if (returnTo) {
         navigate(returnTo, {
@@ -158,12 +158,10 @@ const CourseForm = ({
         return;
       }
 
-      // If parent provided an onSaved handler, let parent control navigation
       if (onSaved) {
         return;
       }
 
-      // After saving, navigate to Course Management page
       navigate("/hod/courses");
     } catch (error) {
       console.error("Save error:", error.response?.data || error.message);
@@ -173,80 +171,71 @@ const CourseForm = ({
     }
   };
 
-  const getTypeColor = (type) => {
-    const colors = {
-      THEORY: "bg-blue-100 text-blue-800",
-      PRACTICAL: "bg-green-100 text-green-800",
-      BOTH: "bg-purple-100 text-purple-800",
-    };
-    return colors[type] || colors.THEORY;
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      {/* Increased max-width from max-w-2xl to max-w-3xl and removed max-height restriction */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-y-auto max-h-[95vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-4xl overflow-y-auto max-h-[95vh] border border-gray-200">
         {/* Modal Header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+        <div className="sticky top-0 z-10 bg-white px-8 py-6 rounded-t-xl border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <FiBook className="text-white text-2xl" />
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <FiBook className="text-blue-600 text-xl" />
               </div>
               <div>
-                {/* Increased font sizes in header */}
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {initialData ? "Edit Course" : "Create New Course"}
                 </h2>
-                <p className="text-blue-100 text-base">
+                <p className="text-gray-600 text-base mt-1">
                   {initialData
-                    ? "Update course details"
-                    : "Add a new course to the programme"}
+                    ? "Update course details below"
+                    : "Fill in the course information to add to programme"}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-3 hover:bg-white/20 rounded-xl transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close modal"
             >
-              <FiX className="text-white text-2xl" />
+              <FiX className="text-gray-500 text-xl" />
             </button>
           </div>
         </div>
 
-        {/* Form Content - Increased padding and spacing */}
+        {/* Form Content */}
         <form onSubmit={submit} className="p-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column */}
             <div className="space-y-6">
               {/* Course Code */}
               <div>
-                <label className="block text-base font-semibold text-gray-800 mb-3">
-                  <FiHash className="inline mr-3 text-gray-600 text-lg" />
+                <label className="block text-base font-medium text-gray-700 mb-2">
                   Course Code
                 </label>
                 <div className="relative">
+                  <FiHash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
                   <input
                     name="code"
                     value={form.code}
                     onChange={onChange}
                     required
-                    className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all pl-12"
+                    className="w-full pl-10 pr-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     placeholder="e.g., CSE301"
                   />
-                  <FiHash className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl" />
+                  {autoGenerating && (
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-blue-600">
+                      Generating...
+                    </span>
+                  )}
                 </div>
-                {autoGenerating && (
-                  <p className="text-sm text-blue-600 mt-2 animate-pulse">
-                    Generating course code...
-                  </p>
-                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Code will be auto-generated based on programme
+                </p>
               </div>
 
               {/* Course Name */}
               <div>
-                <label className="block text-base font-semibold text-gray-800 mb-3">
-                  <FiBook className="inline mr-3 text-gray-600 text-lg" />
+                <label className="block text-base font-medium text-gray-700 mb-2">
                   Course Name
                 </label>
                 <input
@@ -254,79 +243,16 @@ const CourseForm = ({
                   value={form.name}
                   onChange={onChange}
                   required
-                  className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="e.g., Advanced Algorithms"
+                  className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  placeholder="e.g., Advanced Algorithms and Data Structures"
                 />
               </div>
 
-              {/* Slug */}
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-3">
-                  <FiTag className="inline mr-3 text-gray-600 text-lg" />
-                  Course Slug
-                </label>
-                <input
-                  name="slug"
-                  value={form.slug}
-                  onChange={onChange}
-                  required
-                  className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="course-slug-url"
-                />
-                <p className="text-sm text-gray-600 mt-2">
-                  Used for URL identification
-                </p>
-              </div>
-
-              {/* Programme */}
-              <div>
-                <label className="block text-base font-semibold text-gray-800 mb-3">
-                  <FiAward className="inline mr-3 text-gray-600 text-lg" />
-                  Programme
-                </label>
-                <div className="relative">
-                  <select
-                    name="programmeId"
-                    value={form.programmeId}
-                    onChange={onChange}
-                    required
-                    className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white"
-                  >
-                    <option value="" className="text-gray-500">
-                      Select Programme
-                    </option>
-                    {programmes.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.code} - {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                    <svg
-                      className="w-6 h-6 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-6">
               {/* Credits & Semester */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Credits */}
                 <div>
-                  <label className="block text-base font-semibold text-gray-800 mb-3">
-                    <FiHash className="inline mr-3 text-gray-600 text-lg" />
+                  <label className="block text-base font-medium text-gray-700 mb-2">
                     Credits
                   </label>
                   <div className="relative">
@@ -337,37 +263,44 @@ const CourseForm = ({
                       max={6}
                       value={form.credits}
                       onChange={onChange}
-                      className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all pl-12"
+                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     />
-                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600 font-semibold text-base">
-                      CR
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                      0-6
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">0-6 credits</p>
                 </div>
 
+                {/* Semester */}
                 <div>
-                  <label className="block text-base font-semibold text-gray-800 mb-3">
-                    <FiCalendar className="inline mr-3 text-gray-600 text-lg" />
+                  <label className="block text-base font-medium text-gray-700 mb-2">
                     Semester
                   </label>
-                  <input
-                    type="number"
-                    name="semester"
-                    min={1}
-                    max={12}
-                    value={form.semester}
-                    onChange={onChange}
-                    className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="semester"
+                      min={1}
+                      max={12}
+                      value={form.semester}
+                      onChange={onChange}
+                      className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                      1-12
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
 
+            {/* Right Column */}
+            <div className="space-y-6">
               {/* Category & Type */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Category */}
                 <div>
-                  <label className="block text-base font-semibold text-gray-800 mb-3">
-                    <FiGrid className="inline mr-3 text-gray-600 text-lg" />
+                  <label className="block text-base font-medium text-gray-700 mb-2">
                     Category
                   </label>
                   <select
@@ -375,22 +308,22 @@ const CourseForm = ({
                     value={form.category}
                     onChange={onChange}
                     required
-                    className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white"
+                    className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer"
                   >
-                    <option value="" className="text-gray-500">
+                    <option value="" className="text-gray-400">
                       Select Category
                     </option>
                     {categories.map((c) => (
-                      <option key={c} value={c}>
+                      <option key={c} value={c} className="text-gray-700">
                         {c}
                       </option>
                     ))}
                   </select>
                 </div>
 
+                {/* Type */}
                 <div>
-                  <label className="block text-base font-semibold text-gray-800 mb-3">
-                    <FiType className="inline mr-3 text-gray-600 text-lg" />
+                  <label className="block text-base font-medium text-gray-700 mb-2">
                     Type
                   </label>
                   <select
@@ -398,13 +331,10 @@ const CourseForm = ({
                     value={form.type}
                     onChange={onChange}
                     required
-                    className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white"
+                    className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer"
                   >
-                    <option value="" className="text-gray-500">
-                      Select Type
-                    </option>
                     {types.map((t) => (
-                      <option key={t} value={t}>
+                      <option key={t} value={t} className="text-gray-700">
                         {t}
                       </option>
                     ))}
@@ -414,82 +344,117 @@ const CourseForm = ({
 
               {/* Type Preview */}
               {form.type && (
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`px-4 py-2 rounded-full text-sm font-semibold ${getTypeColor(
-                        form.type
-                      )}`}
-                    >
-                      {form.type}
-                    </span>
-                    <span className="text-base text-gray-700">
-                      {form.type === "THEORY"
-                        ? "Lecture-based course"
-                        : form.type === "PRACTICAL"
-                        ? "Lab/Workshop course"
-                        : "Combined theory and practical"}
-                    </span>
+                    <div className={`p-2 rounded ${
+                      form.type === 'THEORY' ? 'bg-blue-50' : 
+                      form.type === 'PRACTICAL' ? 'bg-emerald-50' : 
+                      'bg-purple-50'
+                    }`}>
+                      <FiLayers className={
+                        form.type === 'THEORY' ? 'text-blue-600' : 
+                        form.type === 'PRACTICAL' ? 'text-emerald-600' : 
+                        'text-purple-600'
+                      } />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{form.type}</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {form.type === "THEORY"
+                          ? "Lecture-based course with theoretical focus"
+                          : form.type === "PRACTICAL"
+                          ? "Hands-on lab sessions and workshops"
+                          : "Combined theory lectures and practical sessions"}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Active Status */}
-              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <label className="flex items-start cursor-pointer">
-                  <div className="relative mt-1">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-start gap-4">
+                  <div className="relative flex-shrink-0">
                     <input
                       type="checkbox"
                       name="isActive"
                       checked={form.isActive}
                       onChange={onChange}
                       className="sr-only"
+                      id="activeToggle"
                     />
-                    <div
-                      className={`w-12 h-7 rounded-full transition-colors ${
-                        form.isActive ? "bg-emerald-500" : "bg-gray-400"
-                      }`}
-                    ></div>
-                    <div
-                      className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
-                        form.isActive ? "transform translate-x-5" : ""
-                      }`}
-                    ></div>
+                    <label
+                      htmlFor="activeToggle"
+                      className="block cursor-pointer"
+                    >
+                      <div className="relative w-12 h-6">
+                        <div
+                          className={`w-full h-full rounded-full transition-colors ${
+                            form.isActive
+                              ? "bg-emerald-500"
+                              : "bg-gray-400"
+                          }`}
+                        ></div>
+                        <div
+                          className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transform transition-transform ${
+                            form.isActive ? "translate-x-6" : ""
+                          }`}
+                        ></div>
+                      </div>
+                    </label>
                   </div>
-                  <div className="ml-4">
-                    <span className="block font-semibold text-gray-900 text-base">
-                      Active Course
-                    </span>
-                    <p className="text-sm text-gray-600 mt-1">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-gray-900">
+                        Course Status
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          form.isActive
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {form.isActive ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
                       {form.isActive
-                        ? "Course will be available for assignment"
-                        : "Course will be hidden from faculty assignment"}
+                        ? "Course is visible and available for faculty assignment"
+                        : "Course is archived and hidden from faculty assignment"}
                     </p>
                   </div>
-                </label>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Description */}
           <div className="mt-8">
-            <label className="block text-base font-semibold text-gray-800 mb-3">
-              <FiFileText className="inline mr-3 text-gray-600 text-lg" />
-              Description
+            <label className="block text-base font-medium text-gray-700 mb-2">
+              Course Description
             </label>
             <textarea
               name="description"
               value={form.description}
               onChange={onChange}
               rows={4}
-              className="w-full px-5 py-4 text-base border-2 border-gray-300 rounded-xl focus:ring-3 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              placeholder="Brief description of course objectives, topics, and learning outcomes..."
+              className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white resize-y"
+              placeholder="Describe the course objectives, topics covered, learning outcomes, and assessment methods..."
             />
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-sm text-gray-500">
+                Optional: Provide detailed course description
+              </p>
+              <span className="text-sm text-gray-500">
+                {form.description.length}/500
+              </span>
+            </div>
           </div>
 
-          {/* Action Buttons - Increased size and spacing */}
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mt-10 pt-8 border-t border-gray-300">
-            <div className="flex gap-4">
+          {/* Action Buttons */}
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mt-10 pt-8 border-t border-gray-200">
+            <div className="flex gap-4 w-full lg:w-auto">
               <button
                 type="button"
                 onClick={() => {
@@ -513,15 +478,15 @@ const CourseForm = ({
                     },
                   });
                 }}
-                className="flex items-center gap-3 px-8 py-4 border-2 border-gray-300 text-gray-800 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-base"
+                className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-base w-full lg:w-auto"
               >
-                <FiArrowRight className="text-lg" />
+                <FiArrowRight />
                 Continue to CLOs
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="px-8 py-4 border-2 border-gray-300 text-gray-800 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-base"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-base w-full lg:w-auto"
               >
                 Cancel
               </button>
@@ -530,20 +495,27 @@ const CourseForm = ({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center justify-center gap-3 px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed font-semibold text-base min-w-[200px]"
+              className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-base w-full lg:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <FiSave className="text-lg" />
-                  Save and Exit
+                  <FiSave />
+                  <span>Save Course</span>
                 </>
               )}
             </button>
+          </div>
+
+          {/* Form Status Indicator */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              All changes are auto-saved as draft
+            </p>
           </div>
         </form>
       </div>
