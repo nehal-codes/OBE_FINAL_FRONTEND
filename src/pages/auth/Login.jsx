@@ -20,12 +20,28 @@ const Login = () => {
     setError("");
 
     try {
-      await login(credentials);
-      navigate("/dashboard");
+      const data = await login(credentials);
+
+      const user = data?.user || {};
+      const roleRaw =
+        (user.role && String(user.role)) ||
+        user.roleName ||
+        user.userType ||
+        user.designation ||
+        "";
+      const role = String(roleRaw).toUpperCase();
+
+      if (role === "HOD") {
+        navigate("/", { replace: true });
+      } else if (role === "FACULTY") {
+        navigate("/faculty", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       setError(
         err.response?.data?.error ||
-          "Login failed. Please check your credentials."
+          "Login failed. Please check your credentials.",
       );
     } finally {
       setLoading(false);
@@ -39,7 +55,6 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-
         {/* Logo & Title */}
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center">
@@ -47,9 +62,7 @@ const Login = () => {
           </div>
 
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900">
-              OBE System
-            </h1>
+            <h1 className="text-4xl font-bold text-gray-900">OBE System</h1>
             <p className="mt-2 text-gray-600">
               Outcome-Based Education Platform
             </p>
@@ -59,9 +72,7 @@ const Login = () => {
         {/* Card */}
         <div className="mt-10 bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl p-8 border border-gray-100">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Welcome Back
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
             <p className="text-gray-600 mt-2">
               Sign in to access your dashboard
             </p>
