@@ -12,6 +12,7 @@ import CLOForm from "../pages/HOD/CLOSetup/CLOForm";
 import CLOMapping from "../pages/HOD/CLOSetup/CLOMapping";
 import AssignFaculty from "../pages/HOD/AssignFaculty/AssignFaculty";
 import AssignmentsDashboard from '../pages/HOD/AssignmentsDashboard';
+import ProgramReports from "../pages/HOD/ProgramReports";
 
 export const AppRoutes = () => {
   console.log("✅ Routes loaded");
@@ -33,13 +34,13 @@ export const AppRoutes = () => {
         }
       >
         <Route
-  path="/faculty-assignment"
-  element={
-    <ProtectedRoute allowedRoles={['HOD']}>
-      <AssignmentsDashboard />
-    </ProtectedRoute>
-  }
-/>
+          path="/faculty-assignment"
+          element={
+            <ProtectedRoute allowedRoles={['HOD']}>
+              <AssignmentsDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
 
@@ -61,7 +62,16 @@ export const AppRoutes = () => {
           path="hod/courses/:courseId/clo-mapping"
           element={<CLOMapping />}
         />
+
+
+        <Route
+          path="/hod/reports/program"
+          element={<ProgramReports />}
+        />
       </Route>
+
+      
+      
 
       <Route
         path="/unauthorized"

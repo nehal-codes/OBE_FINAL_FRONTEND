@@ -51,7 +51,7 @@ const menuItems = [
   {
     text: "Reports",
     icon: <FiBarChart2 />,
-    path: "/reports",
+    path: "/hod/reports/program",
     roles: ["HOD", "FACULTY", "ADMIN"],
   },
   {

@@ -7,8 +7,8 @@ import cloAPI from "./clo.api";
 import popsoAPI from "./popso.api";
 import mappingAPI from "./mapping.api";
 import assignmentsAPI from "./assignments.api";
+import reportsAPI from "./reports.api"; 
 
-// Unified HOD API Wrapper
 const HOD_API = {
   programmes: programmesAPI,
   courses: coursesAPI,
@@ -16,10 +16,8 @@ const HOD_API = {
   popso: popsoAPI,
   map: mappingAPI,
   assignments: assignmentsAPI, 
-
-  // 🔥 Dashboard API
+  reports: reportsAPI,
   getDashboardStats: {
-    // Accept an optional token and include it in headers if provided.
     getStats: (token) => {
       const config = token
         ? { headers: { Authorization: `Bearer ${token}` } }
