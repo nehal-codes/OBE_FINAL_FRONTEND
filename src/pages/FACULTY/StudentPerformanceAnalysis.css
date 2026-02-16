@@ -1,0 +1,922 @@
+/* src/components/faculty/StudentPerformanceAnalysis.css */
+
+.performance-analysis {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.performance-analysis.standalone {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.finalized-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.assessment-selector-header select {
+  background: white;
+  border: none;
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+  min-width: 250px;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-export:hover {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+.btn-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.analysis-content {
+  padding: 2rem;
+}
+
+/* Assessment Info Banner */
+.assessment-info-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #e9ecef;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-item .label {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.info-item .value {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: #6c757d;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  flex: 1;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.card-subtext {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 1.5rem 0 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.section-header:hover {
+  background: #e9ecef;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+/* Detailed Summary */
+.detailed-summary {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.detailed-summary h3 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table th {
+  text-align: left;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e9ecef;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.summary-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  color: #2d3748;
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* CLO Table */
+.clo-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.clo-table th {
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #6c757d;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.clo-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+.clo-table tr:last-child td {
+  border-bottom: none;
+}
+
+.clo-table tr.high-attainment {
+  background: rgba(40, 167, 69, 0.05);
+}
+
+.clo-table tr.medium-attainment {
+  background: rgba(255, 193, 7, 0.05);
+}
+
+.clo-table tr.low-attainment {
+  background: rgba(220, 53, 69, 0.05);
+}
+
+.attainment-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.attainment-bar {
+  width: 60px;
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.attainment-progress {
+  height: 100%;
+  background: #667eea;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Student Performance Section */
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-controls select {
+  padding: 0.5rem;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  outline: none;
+}
+
+.sort-direction {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e9ecef;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.sort-direction:hover {
+  background: #f8f9fa;
+}
+
+.student-table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.student-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.student-table th {
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #6c757d;
+  border-bottom: 2px solid #e9ecef;
+  white-space: nowrap;
+}
+
+.student-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+.student-table tr.attained-row {
+  background: rgba(40, 167, 69, 0.02);
+}
+
+.student-table tr.not-attained-row {
+  background: rgba(220, 53, 69, 0.02);
+}
+
+.student-table tr:hover {
+  background: #f8f9fa;
+}
+
+.clo-score {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+
+.clo-score .obtained {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.clo-score .percentage {
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+td.attained .clo-score .obtained {
+  color: #28a745;
+}
+
+td.not-attained .clo-score .obtained {
+  color: #dc3545;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-badge.success {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+}
+
+.status-badge.warning {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+/* Assessment Details Section */
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.detail-item {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.detail-item h4 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.details-table,
+.marks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.details-table td,
+.marks-table td,
+.marks-table th {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.details-table td:first-child,
+.marks-table td:first-child {
+  font-weight: 500;
+  color: #6c757d;
+  width: 40%;
+}
+
+.marks-table th {
+  text-align: left;
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.marks-table tfoot td {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.finalized-tag {
+  background: #28a745;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+.performance-distribution {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.performance-distribution h4 {
+  margin: 0 0 1.5rem 0;
+  color: #2d3748;
+}
+
+.distribution-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.distribution-item {
+  display: grid;
+  grid-template-columns: 80px 1fr 150px;
+  align-items: center;
+  gap: 1rem;
+}
+
+.range-label {
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.distribution-bar {
+  height: 24px;
+  background: #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+.count-label {
+  color: #2d3748;
+  font-size: 0.9rem;
+}
+
+/* Loading, Error, Empty States */
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e9ecef;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-state h3,
+.empty-state h3 {
+  color: #2d3748;
+  margin: 1rem 0 0.5rem;
+}
+
+.error-state p,
+.empty-state p {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+  background: #667eea;
+  color: white;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+}
+/* Add to StudentPerformanceAnalysis.css */
+
+/* Multi-assessment badge */
+.finalized-badge.multi-assessment {
+  background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+}
+
+/* Assessment-wise summary */
+.assessment-wise-summary {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.assessment-wise-summary h4 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.assessment-wise-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.assessment-wise-table th {
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #6c757d;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.assessment-wise-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.assessment-wise-table tr:hover {
+  background: #f8f9fa;
+}
+
+/* CLO Details Panel */
+.clo-details-panel {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.clo-details-panel h4 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.clo-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.clo-details-table th {
+  background: #e9ecef;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.clo-details-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.clo-details-table td.attained-cell {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  font-weight: 500;
+}
+
+.clo-details-table td.not-attained-cell {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.more-students-note {
+  margin-top: 1rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Assessment count in student table */
+.assessment-count {
+  display: block;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.attainment-rate {
+  display: block;
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+/* All assessments details */
+.all-assessments-details {
+  padding: 1rem 0;
+}
+
+.all-assessments-details h4 {
+  margin: 1.5rem 0 1rem 0;
+  color: #2d3748;
+}
+
+.all-assessments-details h4:first-child {
+  margin-top: 0;
+}
+
+.assessments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.assessment-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.assessment-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.assessment-card h5 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+  font-size: 1.1rem;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.5rem;
+}
+
+.assessment-card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.assessment-card-stats .stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.assessment-card-stats .stat .label {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.assessment-card-stats .stat .value {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Coverage table */
+.coverage-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.coverage-table th {
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #6c757d;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.coverage-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.coverage-table td.covered {
+  color: #28a745;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.coverage-table td.not-covered {
+  color: #dc3545;
+  font-size: 1.2rem;
+}
+
+.coverage-table tr:hover {
+  background: #f8f9fa;
+}
+
+/* Student table enhancements */
+.student-table td .clo-score small.count {
+  display: block;
+  color: #6c757d;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .assessments-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .assessments-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .clo-details-table {
+    font-size: 0.9rem;
+  }
+  
+  .clo-details-table th,
+  .clo-details-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .distribution-item {
+    grid-template-columns: 80px 1fr;
+  }
+  
+  .count-label {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .analysis-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .assessment-selector-header select {
+    width: 100%;
+  }
+  
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .search-box {
+    max-width: 100%;
+  }
+  
+  .distribution-item {
+    grid-template-columns: 1fr;
+  }
+  
+  .distribution-bar {
+    width: 100%;
+  }
+  
+}
