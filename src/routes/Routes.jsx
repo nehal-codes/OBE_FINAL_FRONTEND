@@ -11,6 +11,7 @@ import CLOForm from "../pages/HOD/CLOSetup/CLOForm";
 import CLOMapping from "../pages/HOD/CLOSetup/CLOMapping";
 import AssignFaculty from "../pages/HOD/AssignFaculty/AssignFaculty";
 import AssignmentsDashboard from '../pages/HOD/AssignmentsDashboard';
+import ProgramReports from "../pages/HOD/ProgramReports";
 import CourseDetails from "../pages/FACULTY/CourseDetails";
 import FacultyDashboard from "../pages/FACULTY/Dashboard";
 import FacultyAssignments from "../pages/FACULTY/FacultyAssignments";
@@ -35,12 +36,40 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
+        <Route
+          path="/faculty-assignment"
+          element={
+            <ProtectedRoute allowedRoles={['HOD']}>
+              <AssignmentsDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="hod/courses" element={<CourseManagement />} />
         <Route path="hod/courses/:courseId/assign-faculty" element={<AssignFaculty />} />
         <Route path="hod/courses/:courseId/clos" element={<CLOList />} />
         <Route path="hod/courses/:courseId/clo-count" element={<CLOCount />} />
+        <Route
+          path="hod/courses/:courseId/create-clos/:count"
+          element={<CLOForm />}
+        />
+        {/* CLO mapping/review page */}
+        <Route
+          path="hod/courses/:courseId/clo-mapping"
+          element={<CLOMapping />}
+        />
+
+
+        <Route
+          path="/hod/reports/program"
+          element={<ProgramReports />}
+        />
+      </Route>
+
+      
+      
+
         <Route path="hod/courses/:courseId/create-clos/:count" element={<CLOForm />} />
         <Route path="hod/courses/:courseId/clo-mapping" element={<CLOMapping />} />
         <Route path="hod/faculty-assignment" element={<AssignmentsDashboard />} />
