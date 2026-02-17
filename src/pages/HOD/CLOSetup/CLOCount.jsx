@@ -80,21 +80,14 @@ const CLOCount = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-10">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 text-base font-medium mb-6"
-          >
-            <FiArrowLeft className="w-5 h-5" />
-            Back to Courses
-          </button>
-          
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-3">
                 Define Learning Outcomes
               </h1>
               <p className="text-lg text-gray-600">
-                Specify how many Course Learning Outcomes (CLOs) to create for this course
+                Specify how many Course Learning Outcomes (CLOs) to create for
+                this course
               </p>
             </div>
           </div>
@@ -114,12 +107,18 @@ const CLOCount = () => {
                 <div className="flex flex-wrap gap-6 mt-4">
                   <div className="flex items-center gap-3 text-lg text-gray-700">
                     <FiHash className="w-5 h-5" />
-                    <span className="font-medium">{course?.code || courseDraft?.code}</span>
+                    <span className="font-medium">
+                      {course?.code || courseDraft?.code}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3 text-lg text-gray-700">
                     <FiCpu className="w-5 h-5" />
                     <span className="font-medium">
-                      {Math.min(course?.credits || courseDraft?.credits || 0, 6)} Credits
+                      {Math.min(
+                        course?.credits || courseDraft?.credits || 0,
+                        6,
+                      )}{" "}
+                      Credits
                     </span>
                   </div>
                 </div>
@@ -132,7 +131,9 @@ const CLOCount = () => {
         <div className="bg-white rounded-xl border border-gray-200 p-9">
           <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-blue-50 rounded-full mb-8">
-              <span className="text-4xl font-bold text-blue-600">{countInput}</span>
+              <span className="text-4xl font-bold text-blue-600">
+                {countInput}
+              </span>
             </div>
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
               Number of CLOs
@@ -159,7 +160,7 @@ const CLOCount = () => {
                   {[1, 2, 3, 4, 5, 6].map((num) => (
                     <span
                       key={num}
-                      className={`text-lg ${countInput >= num ? 'text-blue-600 font-bold' : 'text-gray-500'}`}
+                      className={`text-lg ${countInput >= num ? "text-blue-600 font-bold" : "text-gray-500"}`}
                     >
                       {num}
                     </span>
@@ -204,21 +205,14 @@ const CLOCount = () => {
               <FiPlus className="w-6 h-6" />
               Create CLOs
             </button>
-
-            <button
-              onClick={handleDirectMapping}
-              className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-lg flex items-center justify-center gap-3"
-            >
-              <FiTarget className="w-6 h-6" />
-              Quick Map
-            </button>
           </div>
         </div>
 
         {/* Help Text */}
         <div className="mt-8 text-center">
           <p className="text-lg text-gray-600">
-            <span className="font-semibold">Tip:</span> You can always edit or add more CLOs later
+            <span className="font-semibold">Tip:</span> You can always edit or
+            add more CLOs later
           </p>
         </div>
       </div>

@@ -18,7 +18,7 @@ import FacultyAssignments from "../pages/FACULTY/FacultyAssignments";
 import AssessmentDashboard from "../pages/FACULTY/Assessmentdashboard";
 
 export const AppRoutes = () => {
-  console.log("✅ Routes loaded");
+  console.log("Routes loaded");
   return (
     <Routes>
       {/* PUBLIC ROUTES */}
@@ -44,40 +44,77 @@ export const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-        <Route index element={<Dashboard />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="hod/courses" element={<CourseManagement />} />
+        <Route
+          index
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hod/courses"
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <CourseManagement />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="hod/courses/:courseId/assign-faculty"
-          element={<AssignFaculty />}
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <AssignFaculty />
+            </ProtectedRoute>
+          }
         />
-        <Route path="hod/courses/:courseId/clos" element={<CLOList />} />
-        <Route path="hod/courses/:courseId/clo-count" element={<CLOCount />} />
+        <Route
+          path="hod/courses/:courseId/clos"
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <CLOList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hod/courses/:courseId/clo-count"
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <CLOCount />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="hod/courses/:courseId/create-clos/:count"
-          element={<CLOForm />}
-        />
-        {/* CLO mapping/review page */}
-        <Route
-          path="hod/courses/:courseId/clo-mapping"
-          element={<CLOMapping />}
-        />
-
-        <Route path="/hod/reports/program" element={<ProgramReports />} />
-      </Route>
-
-      <Route>
-        <Route
-          path="hod/courses/:courseId/create-clos/:count"
-          element={<CLOForm />}
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <CLOForm />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="hod/courses/:courseId/clo-mapping"
-          element={<CLOMapping />}
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <CLOMapping />
+            </ProtectedRoute>
+          }
         />
         <Route
-          path="hod/faculty-assignment"
-          element={<AssignmentsDashboard />}
+          path="/hod/reports/program"
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <ProgramReports />
+            </ProtectedRoute>
+          }
         />
       </Route>
 
@@ -90,13 +127,45 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<FacultyDashboard />} />
-        <Route path="assignments" element={<FacultyAssignments />} />
-        <Route path="courses/:courseId" element={<CourseDetails />} />
+        <Route
+          index
+          element={
+            <ProtectedRoute allowedRoles={["FACULTY"]}>
+              <Navigate to="dashboard" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["FACULTY"]}>
+              <FacultyDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="assignments"
+          element={
+            <ProtectedRoute allowedRoles={["FACULTY"]}>
+              <FacultyAssignments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="courses/:courseId"
+          element={
+            <ProtectedRoute allowedRoles={["FACULTY"]}>
+              <CourseDetails />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="courses/:courseId/assessments"
-          element={<AssessmentDashboard />}
+          element={
+            <ProtectedRoute allowedRoles={["FACULTY"]}>
+              <AssessmentDashboard />
+            </ProtectedRoute>
+          }
         />
       </Route>
 
