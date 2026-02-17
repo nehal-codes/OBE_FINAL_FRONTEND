@@ -105,6 +105,20 @@ const CourseForm = ({
 
   if (!open) return null;
 
+  /* ---------------- VALIDATION HELPER ---------------- */
+  const isFormValid = () => {
+    return (
+      form.code.trim() !== "" &&
+      form.name.trim() !== "" &&
+      form.category.trim() !== "" &&
+      form.type.trim() !== "" &&
+      form.semester >= 1 &&
+      form.semester <= 12 &&
+      form.credits >= 0 &&
+      form.credits <= 6
+    );
+  };
+
   /* ---------------- INPUT HANDLER ---------------- */
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -139,7 +153,7 @@ const CourseForm = ({
         res = await HOD_API.courses.updateCourse(
           initialData.id,
           payload,
-          user?.token
+          user?.token,
         );
       } else {
         res = await HOD_API.courses.createCourse(payload, user?.token);
@@ -149,7 +163,7 @@ const CourseForm = ({
         res?.data?.id || initialData?.id || res?.data?.course?.id;
       onSaved?.(courseId);
       clearCourseDraft();
-      
+
       const returnTo = location.state?.returnTo;
       if (returnTo) {
         navigate(returnTo, {
@@ -346,25 +360,35 @@ const CourseForm = ({
               {form.type && (
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded ${
-                      form.type === 'THEORY' ? 'bg-blue-50' : 
-                      form.type === 'PRACTICAL' ? 'bg-emerald-50' : 
-                      'bg-purple-50'
-                    }`}>
-                      <FiLayers className={
-                        form.type === 'THEORY' ? 'text-blue-600' : 
-                        form.type === 'PRACTICAL' ? 'text-emerald-600' : 
-                        'text-purple-600'
-                      } />
+                    <div
+                      className={`p-2 rounded ${
+                        form.type === "THEORY"
+                          ? "bg-blue-50"
+                          : form.type === "PRACTICAL"
+                            ? "bg-emerald-50"
+                            : "bg-purple-50"
+                      }`}
+                    >
+                      <FiLayers
+                        className={
+                          form.type === "THEORY"
+                            ? "text-blue-600"
+                            : form.type === "PRACTICAL"
+                              ? "text-emerald-600"
+                              : "text-purple-600"
+                        }
+                      />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">{form.type}</div>
+                      <div className="font-medium text-gray-900">
+                        {form.type}
+                      </div>
                       <div className="text-sm text-gray-600 mt-1">
                         {form.type === "THEORY"
                           ? "Lecture-based course with theoretical focus"
                           : form.type === "PRACTICAL"
-                          ? "Hands-on lab sessions and workshops"
-                          : "Combined theory lectures and practical sessions"}
+                            ? "Hands-on lab sessions and workshops"
+                            : "Combined theory lectures and practical sessions"}
                       </div>
                     </div>
                   </div>
@@ -390,9 +414,7 @@ const CourseForm = ({
                       <div className="relative w-12 h-6">
                         <div
                           className={`w-full h-full rounded-full transition-colors ${
-                            form.isActive
-                              ? "bg-emerald-500"
-                              : "bg-gray-400"
+                            form.isActive ? "bg-emerald-500" : "bg-gray-400"
                           }`}
                         ></div>
                         <div
@@ -457,6 +479,7 @@ const CourseForm = ({
             <div className="flex gap-4 w-full lg:w-auto">
               <button
                 type="button"
+                disabled={!isFormValid()}
                 onClick={() => {
                   saveCourseDraft({ ...form, departmentId: form.programmeId });
                   const returnTo = location.state?.returnTo;
@@ -478,7 +501,7 @@ const CourseForm = ({
                     },
                   });
                 }}
-                className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-base w-full lg:w-auto"
+                className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-base w-full lg:w-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
                 <FiArrowRight />
                 Continue to CLOs
@@ -494,7 +517,7 @@ const CourseForm = ({
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isFormValid()}
               className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-base w-full lg:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (

@@ -63,7 +63,7 @@ const CourseManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to deactivate this course?")) return;
+    if (!window.confirm("Are you sure you want to delete this course?")) return;
     try {
       await HOD_API.courses.deleteCourse(id, user?.token);
       loadCourses();
@@ -96,9 +96,14 @@ const CourseManagement = () => {
     return matchSearch && matchSemester && matchSemesterType;
   });
 
-  const sortedCourses = [...filteredCourses].sort(
-    (a, b) => (a.semester || 0) - (b.semester || 0)
-  );
+  const sortedCourses = [...filteredCourses].sort((a, b) => {
+    // Active courses first, then inactive
+    if (a.isActive !== b.isActive) {
+      return a.isActive ? -1 : 1;
+    }
+    // Within same status, sort by semester ascending
+    return (a.semester || 0) - (b.semester || 0);
+  });
 
   const actionButtons = [
     {
@@ -125,7 +130,7 @@ const CourseManagement = () => {
     {
       id: "delete",
       icon: <FiTrash2 className="w-5 h-5" />,
-      label: "Deactivate",
+      label: "Delete",
       color: "text-red-600 hover:text-red-700 hover:bg-red-50",
       action: (c) => handleDelete(c.id),
     },
@@ -142,7 +147,9 @@ const CourseManagement = () => {
                 <FiGrid className="w-8 h-8 text-gray-700" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Course Management</h1>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Course Management
+                </h1>
                 <p className="text-lg text-gray-600 mt-2">
                   Manage curriculum and course offerings across all semesters
                 </p>
@@ -198,7 +205,7 @@ const CourseManagement = () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="flex-1">
               <label className="block text-base font-medium text-gray-700 mb-3">
                 Type
@@ -222,11 +229,15 @@ const CourseManagement = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FiFilter className="w-5 h-5 text-gray-500" />
-                <span className="text-base font-medium text-gray-700">Active filters:</span>
+                <span className="text-base font-medium text-gray-700">
+                  Active filters:
+                </span>
                 <div className="flex gap-3">
                   {selectedSemesterType && (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-base font-medium">
-                      {selectedSemesterType === "even" ? "Even Semesters" : "Odd Semesters"}
+                      {selectedSemesterType === "even"
+                        ? "Even Semesters"
+                        : "Odd Semesters"}
                     </span>
                   )}
                   {selectedSemester && (
@@ -268,7 +279,15 @@ const CourseManagement = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {["Course Code", "Course Name", "Semester", "Credits", "Category", "Status", "Actions"].map((header) => (
+                  {[
+                    "Course Code",
+                    "Course Name",
+                    "Semester",
+                    "Credits",
+                    "Category",
+                    "Status",
+                    "Actions",
+                  ].map((header) => (
                     <th
                       key={header}
                       className="px-8 py-5 text-left text-base font-semibold text-gray-700"
@@ -280,8 +299,8 @@ const CourseManagement = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {sortedCourses.map((course) => (
-                  <tr 
-                    key={course.id} 
+                  <tr
+                    key={course.id}
                     className="hover:bg-gray-50 transition-colors"
                   >
                     {/* COURSE CODE */}
@@ -293,62 +312,77 @@ const CourseManagement = () => {
 
                     {/* COURSE NAME */}
                     <td className="px-8 py-5">
-                      <div className="text-gray-900 font-medium text-lg">{course.name}</div>
+                      <div className="text-gray-900 font-medium text-lg">
+                        {course.name}
+                      </div>
                     </td>
 
-                   {/* SEMESTER */}
-<td className="px-8 py-5 text-center align-middle">
-  <div className="text-gray-900 font-medium text-lg">
-    {course.semester}
-  </div>
-</td>
+                    {/* SEMESTER */}
+                    <td className="px-8 py-5 text-center align-middle">
+                      <div className="text-gray-900 font-medium text-lg">
+                        {course.semester}
+                      </div>
+                    </td>
 
-{/* CREDITS */}
-<td className="px-8 py-5 text-center align-middle">
-  <div className="font-bold text-gray-900 text-lg">
-    {course.credits}
-  </div>
-</td>
+                    {/* CREDITS */}
+                    <td className="px-8 py-5 text-center align-middle">
+                      <div className="font-bold text-gray-900 text-lg">
+                        {course.credits}
+                      </div>
+                    </td>
 
-{/* CATEGORY */}
-<td className="px-8 py-5 text-center align-middle">
-  <span className="text-gray-700 text-lg font-medium capitalize">
-    {course.category || "—"}
-  </span>
-</td>
+                    {/* CATEGORY */}
+                    <td className="px-8 py-5 text-center align-middle">
+                      <span className="text-gray-700 text-lg font-medium capitalize">
+                        {course.category || "—"}
+                      </span>
+                    </td>
 
-{/* STATUS */}
-<td className="px-8 py-5 text-center align-middle">
-  {course.isActive ? (
-    <span className="inline-flex items-center justify-center gap-2 text-green-600 text-lg font-medium">
-      <FiCheckCircle className="w-5 h-5" />
-      Active
-    </span>
-  ) : (
-    <span className="inline-flex items-center justify-center gap-2 text-gray-600 text-lg font-medium">
-      <FiXCircle className="w-5 h-5" />
-      Inactive
-    </span>
-  )}
-</td>
+                    {/* STATUS */}
+                    <td className="px-8 py-5 text-center align-middle">
+                      {course.isActive ? (
+                        <span className="inline-flex items-center justify-center gap-2 text-green-600 text-lg font-medium">
+                          <FiCheckCircle className="w-5 h-5" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center gap-2 text-gray-600 text-lg font-medium">
+                          <FiXCircle className="w-5 h-5" />
+                          Inactive
+                        </span>
+                      )}
+                    </td>
 
-{/* ACTIONS */}
-<td className="px-8 py-5 text-center align-middle">
-  <div className="flex items-center justify-center gap-2">
-    {actionButtons.map((btn) => (
-      <button
-        key={btn.id}
-        onClick={() => btn.action(course)}
-        className={`flex items-center gap-2 px-5 py-3 rounded-lg ${btn.color} transition-colors text-base font-medium`}
-        title={btn.label}
-      >
-        {btn.icon}
-        <span>{btn.label}</span>
-      </button>
-    ))}
-  </div>
-</td>
+                    {/* ACTIONS */}
+                    <td className="px-8 py-5 text-center align-middle">
+                      <div className="flex items-center justify-center gap-2">
+                        {actionButtons.map((btn) => {
+                          // Check if this is the CLOs button and if course has CLOs
+                          const isClosButton = btn.id === "clos";
+                          const hasClos = course.clos && course.clos.length > 0;
+                          const buttonColor =
+                            isClosButton && !hasClos
+                              ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              : btn.color;
+                          const buttonTitle =
+                            isClosButton && !hasClos
+                              ? "CLOs not created for this course"
+                              : btn.label;
 
+                          return (
+                            <button
+                              key={btn.id}
+                              onClick={() => btn.action(course)}
+                              className={`flex items-center gap-2 px-5 py-3 rounded-lg ${buttonColor} transition-colors text-base font-medium`}
+                              title={buttonTitle}
+                            >
+                              {btn.icon}
+                              <span>{btn.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -358,10 +392,12 @@ const CourseManagement = () => {
               <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
                 <FiGrid className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">No courses found</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                No courses found
+              </h3>
               <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
                 {searchTerm || selectedSemester || selectedSemesterType
-                  ? "No courses match your current filters. Try adjusting your search criteria." 
+                  ? "No courses match your current filters. Try adjusting your search criteria."
                   : "Start building your curriculum by adding the first course."}
               </p>
               <button
@@ -380,8 +416,12 @@ const CourseManagement = () => {
       {sortedCourses.length > 0 && (
         <div className="mt-8 flex items-center justify-between px-4">
           <p className="text-lg text-gray-700">
-            Showing <span className="font-bold text-gray-900">{sortedCourses.length}</span> of{" "}
-            <span className="font-bold text-gray-900">{courses.length}</span> courses
+            Showing{" "}
+            <span className="font-bold text-gray-900">
+              {sortedCourses.length}
+            </span>{" "}
+            of <span className="font-bold text-gray-900">{courses.length}</span>{" "}
+            courses
           </p>
           {sortedCourses.length > 10 && (
             <button className="text-lg text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2">
