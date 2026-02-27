@@ -176,8 +176,12 @@ export default function Dashboard() {
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Dashboard</h3>
-            <p className="text-gray-500 text-sm">Fetching your academic insights...</p>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Loading Dashboard
+            </h3>
+            <p className="text-gray-500 text-sm">
+              Fetching your academic insights...
+            </p>
           </div>
         </div>
       </div>
@@ -197,11 +201,10 @@ export default function Dashboard() {
               </span>
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
-              Welcome back,{" "}
+              Department of{" "}
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {user?.name}
+                {user?.department?.name}
               </span>
-              !
             </h1>
             {/*
             <p className="text-gray-600 mt-2 text-base md:text-lg">
@@ -210,14 +213,18 @@ export default function Dashboard() {
             */}
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">Last Updated</div>
-            <div className="text-sm font-semibold text-gray-800">{new Date().toLocaleDateString('en-US', { 
-              weekday: 'short', 
-              month: 'short', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
+              Last Updated
+            </div>
+            <div className="text-sm font-semibold text-gray-800">
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -236,12 +243,16 @@ export default function Dashboard() {
             `}
           >
             {/* Subtle corner accent */}
-            <div className={`absolute top-0 right-0 w-16 h-16 ${stat.color.replace('text-', 'bg-')} opacity-5 rounded-full -translate-y-8 translate-x-8`}></div>
-            
+            <div
+              className={`absolute top-0 right-0 w-16 h-16 ${stat.color.replace("text-", "bg-")} opacity-5 rounded-full -translate-y-8 translate-x-8`}
+            ></div>
+
             <div className="relative flex items-start justify-between z-10">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${stat.color.replace('text-', 'bg-')}`}></div>
+                  <div
+                    className={`w-2 h-2 rounded-full ${stat.color.replace("text-", "bg-")}`}
+                  ></div>
                   <p className="text-gray-600 text-xs font-medium tracking-wider uppercase">
                     {stat.title}
                   </p>
@@ -253,37 +264,47 @@ export default function Dashboard() {
                   </span>
                 </p>
                 <div className="flex items-center text-xs text-gray-500">
-                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  <svg
+                    className="w-3 h-3 mr-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   Live data
                 </div>
               </div>
-              <div className={`
+              <div
+                className={`
                 ${stat.iconBg} ${stat.color} 
                 p-3 rounded-xl shadow-sm 
                 border border-white/50
                 group-hover:scale-110 group-hover:shadow-md 
                 transition-all duration-300
-              `}>
+              `}
+              >
                 {stat.icon}
               </div>
             </div>
-            
+
             {/* Progress indicator (subtle) */}
             <div className="relative mt-4 pt-2 border-t border-white/30">
               <div className="h-1 w-full bg-white/50 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${stat.color.replace('text-', 'bg-')} rounded-full transition-all duration-700`}
-                  style={{ width: `${Math.min((stat.value / 50) * 100, 100)}%` }}
+                <div
+                  className={`h-full ${stat.color.replace("text-", "bg-")} rounded-full transition-all duration-700`}
+                  style={{
+                    width: `${Math.min((stat.value / 50) * 100, 100)}%`,
+                  }}
                 ></div>
               </div>
             </div>
           </div>
         ))}
       </div>
-
-     
 
       {/* Footer Note */}
       <div className="mt-10 pt-6 border-t border-gray-100">
