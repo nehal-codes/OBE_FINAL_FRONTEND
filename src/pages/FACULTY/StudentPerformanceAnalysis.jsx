@@ -1,1354 +1,819 @@
 // src/components/faculty/StudentPerformanceAnalysis.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  BarChart,
-  TrendingUp,
-  Users,
-  Award,
-  AlertTriangle,
-  CheckCircle,
-  Download,
-  Filter,
-  Target,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  Layers,
-  BookOpen,
-  Clock,
-  Star,
-  PieChart
+  BarChart, Users, Award, AlertTriangle, CheckCircle,
+  Target, ChevronDown, ChevronRight, FileText, Layers,
+  BookOpen, Clock, Star
 } from 'lucide-react';
 import assessmentApi from "../../apis/assessments/assessment";
-import "./StudentPerformanceAnalysis.css";
+import facultyApi from "../../apis/faculty";
+import PerformanceHeader from './Performance/PerformanceHeader';
+import AssessmentDetails from './Performance/AssessmentDetails';
+import CLOAnalysisSection from './Performance/CLOAnalysisSection';
+import QuickGlanceDashboard from './Performance/QuickGlanceDashboard';
+import StudentPerformanceTable from './Performance/StudentPerformanceTable';
+import AttainmentSummary from './Performance/AttainmentSummary';
 
+// ─── Utilities ───────────────────────────────────────────────────────────────
+const getResponseData = (response) => {
+  if (response?.data?.data) return response.data.data;
+  if (response?.data) return response.data;
+  return response;
+};
+
+export const calculateAttainmentLevel = (percentage, threshold) => {
+  if (percentage < threshold) return 0;
+  if (percentage < threshold + 10) return 1;
+  if (percentage < threshold + 20) return 2;
+  return 3;
+};
+
+// ─── CLO Analysis Helpers ────────────────────────────────────────────────────
+const analyzeCLOPerformance = (marksData, studentsData, closData, courseInfo) => {
+  if (!marksData || !studentsData) return null;
+
+  const marksStudents = marksData.students || [];
+  const assessmentClos = marksData.clos || [];
+
+  const studentMap = {};
+  studentsData.forEach(s => { studentMap[s.id] = s; });
+
+  const cloMap = {};
+  closData.forEach(c => {
+    cloMap[c.id] = {
+      threshold: c.attainmentThreshold || 50,
+      code: c.code, statement: c.statement, bloomLevel: c.bloomLevel
+    };
+  });
+
+  const cloAnalysis = {};
+  const studentCLOPerformance = {};
+
+  marksStudents.forEach(ms => {
+    const sid = ms.studentId;
+    if (!studentCLOPerformance[sid]) {
+      studentCLOPerformance[sid] = {
+        studentId: sid,
+        rollNumber: ms.rollNumber || studentMap[sid]?.rollNumber || 'N/A',
+        name: ms.name || studentMap[sid]?.name || 'Unknown',
+        cloPerformance: {}, totalObtained: 0, totalMax: 0
+      };
+    }
+  });
+
+  assessmentClos.forEach(clo => {
+    const cloId = clo.id;
+    const maxMarks = clo.marksAllocated || 0;
+    const threshold = cloMap[cloId]?.threshold || 50;
+    const cloCode = cloMap[cloId]?.code || clo.code || `CLO-${cloId.slice(0, 4)}`;
+    const cloStudentScores = [];
+
+    marksStudents.forEach(ms => {
+      const sid = ms.studentId;
+      const mData = (ms.marksByClo || {})[cloId];
+      const obtained = mData ? parseFloat(mData.marksObtained) || 0 : 0;
+      const percentage = maxMarks > 0 ? (obtained / maxMarks) * 100 : 0;
+      const attained = percentage >= threshold;
+      const attainmentLevel = calculateAttainmentLevel(percentage, threshold);
+
+      if (studentCLOPerformance[sid]) {
+        studentCLOPerformance[sid].cloPerformance[cloId] = {
+          obtained, maxMarks, percentage, threshold, attained, attainmentLevel,
+          code: cloCode, statement: cloMap[cloId]?.statement || clo.statement || ''
+        };
+        studentCLOPerformance[sid].totalObtained += obtained;
+        studentCLOPerformance[sid].totalMax += maxMarks;
+      }
+
+      cloStudentScores.push({
+        studentId: sid,
+        rollNumber: ms.rollNumber || studentMap[sid]?.rollNumber || 'N/A',
+        name: ms.name || studentMap[sid]?.name || 'Unknown',
+        obtained, maxMarks, percentage, attained, attainmentLevel
+      });
+    });
+
+    const attainedStudents = cloStudentScores.filter(s => s.attained).length;
+    const totalStudents = cloStudentScores.length;
+    const classAttainment = totalStudents > 0 ? (attainedStudents / totalStudents) * 100 : 0;
+    const directAttainmentLevel = classAttainment >= 60 ? 3 : classAttainment >= 50 ? 2 : classAttainment >= 40 ? 1 : 0;
+
+    cloAnalysis[cloId] = {
+      id: cloId, code: cloCode,
+      statement: cloMap[cloId]?.statement || clo.statement || '',
+      bloomLevel: cloMap[cloId]?.bloomLevel || clo.bloomLevel || '',
+      maxMarks, threshold, studentScores: cloStudentScores,
+      statistics: {
+        totalStudents, attainedStudents, classAttainment,
+        averageScore: totalStudents > 0 ? cloStudentScores.reduce((s, x) => s + x.percentage, 0) / totalStudents : 0,
+        maxScore: totalStudents > 0 ? Math.max(...cloStudentScores.map(s => s.percentage)) : 0,
+        minScore: totalStudents > 0 ? Math.min(...cloStudentScores.map(s => s.percentage)) : 0,
+        attainmentDistribution: {
+          level0: cloStudentScores.filter(s => s.attainmentLevel === 0).length,
+          level1: cloStudentScores.filter(s => s.attainmentLevel === 1).length,
+          level2: cloStudentScores.filter(s => s.attainmentLevel === 2).length,
+          level3: cloStudentScores.filter(s => s.attainmentLevel === 3).length,
+        }
+      },
+      directAttainment: {
+        percentage: classAttainment, level: directAttainmentLevel,
+        label: directAttainmentLevel === 3 ? 'High' : directAttainmentLevel === 2 ? 'Medium' : directAttainmentLevel === 1 ? 'Low' : 'Not Attained'
+      }
+    };
+  });
+
+  const students = Object.values(studentCLOPerformance).map(s => ({
+    ...s, totalPercentage: s.totalMax > 0 ? (s.totalObtained / s.totalMax) * 100 : 0
+  }));
+
+  return {
+    assessment: {
+      id: marksData.assessment?.id || marksData.id,
+      title: marksData.assessment?.title || marksData.title || 'Assessment',
+      type: marksData.assessment?.type || marksData.type,
+      maxMarks: marksData.assessment?.maxMarks || marksData.maxMarks,
+      duration: marksData.assessment?.duration || marksData.duration,
+      conductedOn: marksData.assessment?.conductedOn || marksData.conductedOn
+    },
+    course: {
+      id: courseInfo.id, code: courseInfo.code, name: courseInfo.name,
+      credits: courseInfo.credits, semester: courseInfo.semester, year: courseInfo.year
+    },
+    clos: assessmentClos.map(c => ({
+      id: c.id,
+      code: cloMap[c.id]?.code || c.code || `CLO-${c.id.slice(0, 4)}`,
+      statement: cloMap[c.id]?.statement || c.statement || '',
+      bloomLevel: cloMap[c.id]?.bloomLevel || c.bloomLevel || '',
+      maxMarks: c.marksAllocated || 0,
+      threshold: cloMap[c.id]?.threshold || 50
+    })),
+    cloAnalysis, students, generatedAt: new Date().toISOString()
+  };
+};
+
+const combineCLOPerformance = (assessmentsData, studentsData, closData, courseInfo, finalizedAssessments) => {
+  if (!assessmentsData || assessmentsData.length === 0) return null;
+
+  const studentMap = {};
+  studentsData.forEach(s => { studentMap[s.id] = s; });
+
+  const cloMap = {};
+  closData.forEach(c => {
+    cloMap[c.id] = { threshold: c.attainmentThreshold || 50, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel };
+  });
+
+  // FIX #1: Build allAssessments from finalizedAssessments (source of truth for IDs)
+  // then match to marks data by title/index as fallback
+  const allAssessments = finalizedAssessments.map((fa, idx) => {
+    const matchingMarks = assessmentsData[idx]; // same order as Promise.all
+    return {
+      id: fa.id, // ← use the finalized assessment's real ID, not marks data
+      title: fa.title || matchingMarks?.assessment?.title || matchingMarks?.title || 'Assessment',
+      type: fa.type || matchingMarks?.assessment?.type || matchingMarks?.type,
+      maxMarks: fa.maxMarks || matchingMarks?.assessment?.maxMarks || matchingMarks?.maxMarks,
+    };
+  });
+
+  const combinedCloAnalysis = {};
+  const studentCombinedPerformance = {};
+  const assessmentWiseStats = [];
+
+  assessmentsData.forEach((assessmentData, idx) => {
+    const marksStudents = assessmentData.students || [];
+    const assessmentClos = assessmentData.clos || [];
+    // FIX #1: use the real assessment ID from finalizedAssessments
+    const realAssessmentId = finalizedAssessments[idx]?.id || assessmentData.assessment?.id || assessmentData.id;
+    const assessmentTitle = finalizedAssessments[idx]?.title || assessmentData.assessment?.title || assessmentData.title;
+
+    const studentScores = marksStudents.map(s => {
+      let tot = 0, mx = 0;
+      Object.values(s.marksByClo || {}).forEach(m => { tot += parseFloat(m.marksObtained) || 0; mx += parseFloat(m.maxMarks) || 0; });
+      return mx > 0 ? (tot / mx) * 100 : 0;
+    });
+
+    assessmentWiseStats.push({
+      assessment: {
+        id: realAssessmentId,
+        title: assessmentTitle,
+        type: finalizedAssessments[idx]?.type || assessmentData.assessment?.type || assessmentData.type,
+        maxMarks: finalizedAssessments[idx]?.maxMarks || assessmentData.assessment?.maxMarks || assessmentData.maxMarks
+      },
+      classAverage: studentScores.length > 0 ? studentScores.reduce((a, b) => a + b, 0) / studentScores.length : 0,
+      totalStudents: marksStudents.length,
+      clos: assessmentClos.map(c => ({ id: c.id, code: cloMap[c.id]?.code || c.code, maxMarks: c.marksAllocated }))
+    });
+
+    assessmentClos.forEach(clo => {
+      const cloId = clo.id;
+      const maxMarks = clo.marksAllocated || 0;
+      const threshold = cloMap[cloId]?.threshold || 50;
+      const cloCode = cloMap[cloId]?.code || clo.code || `CLO-${cloId.slice(0, 4)}`;
+
+      if (!combinedCloAnalysis[cloId]) {
+        combinedCloAnalysis[cloId] = {
+          id: cloId, code: cloCode,
+          statement: cloMap[cloId]?.statement || clo.statement || '',
+          bloomLevel: cloMap[cloId]?.bloomLevel || clo.bloomLevel || '',
+          threshold, assessments: [], studentScores: {}, totalOccurrences: 0
+        };
+      }
+
+      combinedCloAnalysis[cloId].assessments.push({ id: realAssessmentId, title: assessmentTitle, maxMarks });
+
+      marksStudents.forEach(ms => {
+        const sid = ms.studentId;
+        const mData = (ms.marksByClo || {})[cloId];
+        const obtained = mData ? parseFloat(mData.marksObtained) || 0 : 0;
+        const percentage = maxMarks > 0 ? (obtained / maxMarks) * 100 : 0;
+        const attained = percentage >= threshold;
+        const attainmentLevel = calculateAttainmentLevel(percentage, threshold);
+
+        if (!combinedCloAnalysis[cloId].studentScores[sid]) {
+          combinedCloAnalysis[cloId].studentScores[sid] = {
+            studentId: sid,
+            rollNumber: ms.rollNumber || studentMap[sid]?.rollNumber || 'N/A',
+            name: ms.name || studentMap[sid]?.name || 'Unknown',
+            scores: [], percentages: [], attainedCount: 0, totalObtained: 0, totalMax: 0
+          };
+        }
+
+        const scd = combinedCloAnalysis[cloId].studentScores[sid];
+        scd.scores.push({ assessmentId: realAssessmentId, assessmentTitle, obtained, maxMarks, percentage, attained, attainmentLevel });
+        scd.percentages.push(percentage);
+        scd.totalObtained += obtained;
+        scd.totalMax += maxMarks;
+        if (attained) scd.attainedCount += 1;
+      });
+
+      combinedCloAnalysis[cloId].totalOccurrences += 1;
+    });
+
+    marksStudents.forEach(ms => {
+      const sid = ms.studentId;
+      if (!studentCombinedPerformance[sid]) {
+        studentCombinedPerformance[sid] = {
+          studentId: sid,
+          rollNumber: ms.rollNumber || studentMap[sid]?.rollNumber || 'N/A',
+          name: ms.name || studentMap[sid]?.name || 'Unknown',
+          cloPerformance: {}, totalObtained: 0, totalMax: 0, assessmentsAttempted: 0, assessmentScores: []
+        };
+      }
+      let tot = 0, mx = 0;
+      Object.values(ms.marksByClo || {}).forEach(m => { tot += parseFloat(m.marksObtained) || 0; mx += parseFloat(m.maxMarks) || 0; });
+      studentCombinedPerformance[sid].assessmentScores.push({
+        assessmentId: realAssessmentId, assessmentTitle,
+        totalPercentage: mx > 0 ? (tot / mx) * 100 : 0, obtained: tot, maxMarks: mx
+      });
+      studentCombinedPerformance[sid].assessmentsAttempted += 1;
+    });
+  });
+
+  Object.keys(combinedCloAnalysis).forEach(cloId => {
+    const clo = combinedCloAnalysis[cloId];
+    const arr = Object.values(clo.studentScores);
+    const totalStudents = arr.length;
+
+    arr.forEach(s => {
+      s.averagePercentage = s.totalMax > 0 ? (s.totalObtained / s.totalMax) * 100 : 0;
+      s.overallAttained = s.attainedCount >= Math.ceil(clo.totalOccurrences * 0.7);
+      s.overallAttainmentLevel = calculateAttainmentLevel(s.averagePercentage, clo.threshold);
+    });
+
+    const attainedStudents = arr.filter(s => s.overallAttained).length;
+    const classAttainment = totalStudents > 0 ? (attainedStudents / totalStudents) * 100 : 0;
+    const directAttainmentLevel = classAttainment >= 60 ? 3 : classAttainment >= 50 ? 2 : classAttainment >= 40 ? 1 : 0;
+
+    clo.statistics = {
+      totalStudents, attainedStudents, classAttainment,
+      averageScore: totalStudents > 0 ? arr.reduce((s, x) => s + x.averagePercentage, 0) / totalStudents : 0,
+      attainmentDistribution: {
+        level0: arr.filter(s => s.overallAttainmentLevel === 0).length,
+        level1: arr.filter(s => s.overallAttainmentLevel === 1).length,
+        level2: arr.filter(s => s.overallAttainmentLevel === 2).length,
+        level3: arr.filter(s => s.overallAttainmentLevel === 3).length,
+      }
+    };
+
+    clo.directAttainment = {
+      percentage: classAttainment, level: directAttainmentLevel,
+      label: directAttainmentLevel === 3 ? 'High' : directAttainmentLevel === 2 ? 'Medium' : directAttainmentLevel === 1 ? 'Low' : 'Not Attained'
+    };
+
+    arr.forEach(s => {
+      if (studentCombinedPerformance[s.studentId]) {
+        studentCombinedPerformance[s.studentId].cloPerformance[cloId] = {
+          code: clo.code, averagePercentage: s.averagePercentage, overallAttained: s.overallAttained,
+          attainmentLevel: s.overallAttainmentLevel, assessmentsCount: clo.totalOccurrences,
+          attainedCount: s.attainedCount, percentages: s.percentages, scores: s.scores
+        };
+        studentCombinedPerformance[s.studentId].totalObtained += s.totalObtained;
+        studentCombinedPerformance[s.studentId].totalMax += s.totalMax;
+      }
+    });
+  });
+
+  const students = Object.values(studentCombinedPerformance).map(s => {
+    const totalPercentage = s.totalMax > 0 ? (s.totalObtained / s.totalMax) * 100 : 0;
+    const closAttained = Object.values(s.cloPerformance).filter(c => c.overallAttained).length;
+    const totalClos = Object.keys(s.cloPerformance).length;
+    return { ...s, totalPercentage, closAttained, totalClos, overallAttained: closAttained >= Math.ceil(totalClos * 0.7) };
+  });
+
+  return {
+    assessments: allAssessments, assessmentWiseStats,
+    course: { id: courseInfo.id, code: courseInfo.code, name: courseInfo.name, credits: courseInfo.credits, semester: courseInfo.semester, year: courseInfo.year },
+    clos: Object.values(combinedCloAnalysis).map(c => ({ id: c.id, code: c.code, statement: c.statement, bloomLevel: c.bloomLevel, threshold: c.threshold })),
+    cloAnalysis: combinedCloAnalysis, students, generatedAt: new Date().toISOString()
+  };
+};
+
+// ─── Export Helpers ──────────────────────────────────────────────────────────
+const buildCSV = (performanceData, isAllMode) => {
+  const cloList = Object.values(performanceData.cloAnalysis);
+
+  let csv = 'CLO Attainment Summary\n';
+  csv += "CLO Code,Bloom's Level,Threshold,Total Students,Students Attained,Class Attainment %,Direct Attainment Level\n";
+  cloList.forEach(clo => {
+    csv += `${clo.code},${clo.bloomLevel || 'N/A'},${clo.threshold}%,${clo.statistics.totalStudents},${clo.statistics.attainedStudents},${clo.statistics.classAttainment.toFixed(1)}%,Level ${clo.directAttainment.level} (${clo.directAttainment.label})\n`;
+  });
+
+  csv += '\nStudent-wise CLO Performance\n';
+  csv += 'Roll Number,Student Name';
+  if (isAllMode) csv += ',Assessments Attempted';
+  cloList.forEach(clo => { csv += `,${clo.code} (%),${clo.code} Level`; });
+  csv += ',Overall %\n';
+
+  performanceData.students.forEach(student => {
+    csv += `"${student.rollNumber}","${student.name}"`;
+    if (isAllMode) csv += `,${student.assessmentsAttempted || 0}`;
+    cloList.forEach(clo => {
+      const perf = student.cloPerformance[clo.id];
+      if (perf) {
+        const pct = perf.averagePercentage ?? perf.percentage ?? 0;
+        const lvl = perf.attainmentLevel ?? calculateAttainmentLevel(pct, clo.threshold);
+        csv += `,${pct.toFixed(1)}%,Level ${lvl}`;
+      } else {
+        csv += ',N/A,N/A';
+      }
+    });
+    csv += `,${student.totalPercentage.toFixed(1)}%\n`;
+  });
+
+  return csv;
+};
+
+const downloadBlob = (content, fileName, mimeType) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// ─── Collapsible Section Wrapper ─────────────────────────────────────────────
+const Section = ({ title, icon: Icon, sectionKey, expanded, onToggle, children }) => (
+  <>
+    <div className="section-header" onClick={() => onToggle(sectionKey)}>
+      <h3><Icon size={20} /> {title}</h3>
+      {expanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+    </div>
+    {expanded && children}
+  </>
+);
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 const StudentPerformanceAnalysis = ({
   course,
   assessmentId = null,
-  assessments = [],
   onClose,
   standalone = true,
   showHeader = true,
   className = ''
 }) => {
-  // State Management
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [availableAssessments, setAvailableAssessments] = useState([]);
   const [performanceData, setPerformanceData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [studentFilter, setStudentFilter] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'totalPercentage', direction: 'desc' });
-  const [analysisMode, setAnalysisMode] = useState('single'); // 'single' or 'all'
-  const [expandedSections, setExpandedSections] = useState({
-    summary: true,
-    cloAnalysis: true,
-    studentPerformance: true,
-    assessmentDetails: true,
-    assessmentWise: true
-  });
-  const [selectedClo, setSelectedClo] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [analysisMode, setAnalysisMode] = useState('all');
+  const [isReportSubmitted, setIsReportSubmitted] = useState(false); // New state for submission status
+  const analysisModeRef = useRef('all');
+  // Store finalized assessments ref for use in combined analysis
+  const finalizedAssessmentsRef = useRef([]);
 
-  // Safe array utilities
-  const safeArray = (arr) => Array.isArray(arr) ? arr : [];
-  const getResponseData = (response) => {
-    if (response?.data?.data) return response.data.data;
-    if (response?.data) return response.data;
-    return response;
+  const [expandedSections, setExpandedSections] = useState({
+    assessmentDetails: true,
+    quickGlance: true,
+    cloWiseAnalysis: true,
+    attainmentSummary: true,
+    studentPerformance: true
+  });
+
+  const setMode = (mode) => {
+    analysisModeRef.current = mode;
+    setAnalysisMode(mode);
   };
 
-  // Fetch all necessary data
-  const fetchAllData = useCallback(async () => {
-    if (!course) {
-      setError('Please select a course');
-      return;
-    }
+  const toggleSection = (key) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
+  // ─── Check if report already submitted ───────────────────────────────────
+  const checkReportSubmissionStatus = useCallback(async () => {
+    if (!performanceData || analysisModeRef.current !== 'all') return;
+    
+    try {
+      const assessmentIds = performanceData.assessments?.map(a => a.id) || [];
+      const params = new URLSearchParams({
+        courseId: performanceData.course.id,
+        semester: performanceData.course.semester,
+        year: performanceData.course.year
+      });
+      
+      if (assessmentIds.length > 0) {
+        params.append('assessmentIds', assessmentIds.join(','));
+      }
+      
+      const response = await facultyApi.checkReportSubmission(params);
+      setIsReportSubmitted(response.data.isSubmitted);
+    } catch (err) {
+      console.error('Error checking report submission status:', err);
+      setIsReportSubmitted(false); // Default to false on error
+    }
+  }, [performanceData]);
+
+  // ─── Data fetching ──────────────────────────────────────────────────────
+  const fetchAssessmentMarks = useCallback(async (asmtId, studentsData, closData) => {
+    const marksResponse = await assessmentApi.getAssessmentMarks(asmtId);
+    const marksData = getResponseData(marksResponse);
+    if (!marksData) throw new Error('No marks data received');
+    return analyzeCLOPerformance(marksData, studentsData, closData, course);
+  }, [course]);
+
+  const fetchAllAssessmentsPerformance = useCallback(async (finalized, studentsData, closData) => {
+    const results = await Promise.all(
+      finalized.map(a =>
+        assessmentApi.getAssessmentMarks(a.id)
+          .then(r => getResponseData(r))
+          .catch(err => { console.error(`Marks fetch failed for ${a.id}:`, err); return null; })
+      )
+    );
+    const valid = results.filter(d => d && d.students);
+    // FIX #1: filter finalized to match valid results (preserve index alignment)
+    const validFinalized = finalized.filter((_, i) => results[i] && results[i].students);
+    if (valid.length === 0) throw new Error('No valid marks data found for any assessment');
+    return combineCLOPerformance(valid, studentsData, closData, course, validFinalized);
+  }, [course]);
+
+  const fetchAllData = useCallback(async () => {
+    if (!course) { setError('Please select a course'); return; }
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('[PerformanceAnalysis] Fetching all data for course:', course.id);
-      
-      const [assessmentsResponse, studentsResponse, closResponse] = await Promise.all([
-        assessmentApi.getCourseAssessments(course.id, {
-          semester: course.semester,
-          year: course.year
-        }),
-        assessmentApi.getCourseStudents(course.id, {
-          semester: course.semester,
-          year: course.year
-        }),
+      setIsReportSubmitted(false); // Reset submission status on new fetch
+
+      const [assessmentsRes, studentsRes, closRes] = await Promise.all([
+        assessmentApi.getCourseAssessments(course.id, { semester: course.semester, year: course.year }),
+        assessmentApi.getCourseStudents(course.id, { semester: course.semester, year: course.year }),
         assessmentApi.getCourseClos(course.id)
       ]);
-      
-      const assessmentsData = getResponseData(assessmentsResponse)?.assessments || [];
-      const studentsData = getResponseData(studentsResponse)?.students || [];
-      const closData = getResponseData(closResponse) || [];
-      
-      const finalizedAssessments = assessmentsData.filter(a => a.isMarksFinalized === true);
-      setAvailableAssessments(finalizedAssessments);
-      
-      // Check if we're in "all assessments" mode
-      if (assessmentId === null && finalizedAssessments.length > 0) {
-        // Load all assessments
-        console.log('[PerformanceAnalysis] Loading all assessments');
-        setAnalysisMode('all');
-        await fetchAllAssessmentsPerformance(finalizedAssessments, studentsData, closData);
-      } else if (assessmentId) {
-        // Load specific assessment
-        const assessment = finalizedAssessments.find(a => a.id === assessmentId);
-        if (assessment) {
-          setSelectedAssessment(assessment);
-          setAnalysisMode('single');
-          await fetchAssessmentMarks(assessment.id, studentsData, closData);
+
+      const assessmentsData = getResponseData(assessmentsRes)?.assessments || [];
+      const studentsData = getResponseData(studentsRes)?.students || [];
+      const closData = getResponseData(closRes) || [];
+
+      const finalized = assessmentsData.filter(a => a.isMarksFinalized === true);
+      setAvailableAssessments(finalized);
+      finalizedAssessmentsRef.current = finalized;
+
+      if (finalized.length === 0) { setError('No finalized assessments found for this course'); return; }
+
+      if (assessmentId) {
+        const target = finalized.find(a => a.id === assessmentId);
+        if (target) {
+          setSelectedAssessment(target);
+          setMode('single');
+          const data = await fetchAssessmentMarks(target.id, studentsData, closData);
+          setPerformanceData(data);
         } else {
           setError('Assessment not found or not finalized');
         }
-      } else if (finalizedAssessments.length > 0) {
-        // Default to first assessment
-        setSelectedAssessment(finalizedAssessments[0]);
-        setAnalysisMode('single');
-        await fetchAssessmentMarks(finalizedAssessments[0].id, studentsData, closData);
       } else {
-        setError('No finalized assessments found for this course');
+        setMode('all');
+        const data = await fetchAllAssessmentsPerformance(finalized, studentsData, closData);
+        setPerformanceData(data);
       }
-      
     } catch (err) {
-      console.error('[PerformanceAnalysis] Error fetching data:', err);
+      console.error('[PerformanceAnalysis] fetchAllData error:', err);
       setError(err.response?.data?.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [course, assessmentId]);
+  }, [course, assessmentId, fetchAssessmentMarks, fetchAllAssessmentsPerformance]);
 
-  // Fetch marks for a specific assessment
-  const fetchAssessmentMarks = useCallback(async (assessmentId, studentsData, closData) => {
-    try {
-      const marksResponse = await assessmentApi.getAssessmentMarks(assessmentId);
-      const marksData = getResponseData(marksResponse);
-      
-      if (!marksData) {
-        throw new Error('No marks data received');
-      }
-      
-      const analyzedData = analyzePerformance(marksData, studentsData, closData, course);
-      setPerformanceData(analyzedData);
-      
-    } catch (err) {
-      console.error('[PerformanceAnalysis] Error fetching marks:', err);
-      setError('Failed to load marks data');
+  // Check submission status when performance data changes
+  useEffect(() => {
+    if (performanceData && analysisMode === 'all') {
+      checkReportSubmissionStatus();
     }
-  }, [course]);
+  }, [performanceData, analysisMode, checkReportSubmissionStatus]);
 
-  // Fetch all assessments performance
-  const fetchAllAssessmentsPerformance = useCallback(async (assessments, studentsData, closData) => {
+  const handleAssessmentSelect = async (value) => {
+    setIsReportSubmitted(false); // Reset submission status
+    setError(null);
+    setPerformanceData(null);
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Fetch marks for all assessments
-      const marksPromises = assessments.map(assessment => 
-        assessmentApi.getAssessmentMarks(assessment.id)
-          .then(res => getResponseData(res))
-          .catch(err => {
-            console.error(`Failed to fetch marks for assessment ${assessment.id}:`, err);
-            return null;
-          })
-      );
-      
-      const marksResults = await Promise.all(marksPromises);
-      
-      // Filter out failed requests
-      const validMarksData = marksResults.filter(data => data && data.students);
-      
-      if (validMarksData.length === 0) {
-        throw new Error('No valid marks data found for any assessment');
+      const [studentsRes, closRes] = await Promise.all([
+        assessmentApi.getCourseStudents(course.id, { semester: course.semester, year: course.year }),
+        assessmentApi.getCourseClos(course.id)
+      ]);
+      const studentsData = getResponseData(studentsRes)?.students || [];
+      const closData = getResponseData(closRes) || [];
+
+      if (value === 'all') {
+        setMode('all');
+        const data = await fetchAllAssessmentsPerformance(finalizedAssessmentsRef.current, studentsData, closData);
+        setPerformanceData(data);
+      } else {
+        const target = availableAssessments.find(a => a.id === value);
+        if (target) {
+          setSelectedAssessment(target);
+          setMode('single');
+          const data = await fetchAssessmentMarks(target.id, studentsData, closData);
+          setPerformanceData(data);
+        }
       }
-      
-      // Analyze each assessment
-      const analyzedAssessments = validMarksData.map(marksData => 
-        analyzePerformance(marksData, studentsData, closData, course)
-      ).filter(data => data !== null);
-      
-      // Combine all assessments
-      const combinedData = combineAssessmentsPerformance(analyzedAssessments, course);
-      setPerformanceData(combinedData);
-      
     } catch (err) {
-      console.error('[PerformanceAnalysis] Error fetching all assessments:', err);
-      setError('Failed to load all assessments data');
+      console.error('handleAssessmentSelect error:', err);
+      setError('Failed to load assessment data');
     } finally {
       setLoading(false);
     }
-  }, [course]);
-
-  // Analyze performance for a single assessment
-  const analyzePerformance = (marksData, studentsData, closData, courseInfo) => {
-    if (!marksData || !studentsData) return null;
-    
-    const marksStudents = marksData.students || [];
-    const assessmentClos = marksData.clos || [];
-    
-    const studentMap = {};
-    studentsData.forEach(student => {
-      studentMap[student.id] = student;
-    });
-    
-    const cloThresholdMap = {};
-    closData.forEach(clo => {
-      cloThresholdMap[clo.id] = {
-        threshold: clo.attainmentThreshold || 50,
-        code: clo.code,
-        statement: clo.statement,
-        bloomLevel: clo.bloomLevel
-      };
-    });
-    
-    const studentPerformance = marksStudents.map(marksStudent => {
-      const studentId = marksStudent.studentId;
-      const studentInfo = studentMap[studentId] || {};
-      const marksByClo = marksStudent.marksByClo || {};
-      
-      const cloPerformance = {};
-      let totalObtained = 0;
-      let totalMax = 0;
-      
-      assessmentClos.forEach(clo => {
-        const cloId = clo.id;
-        const maxMarks = clo.marksAllocated || 0;
-        const marksData = marksByClo[cloId];
-        const obtained = marksData ? parseFloat(marksData.marksObtained) || 0 : 0;
-        
-        const percentage = maxMarks > 0 ? (obtained / maxMarks) * 100 : 0;
-        const threshold = cloThresholdMap[cloId]?.threshold || 50;
-        const attained = percentage >= threshold;
-        
-        cloPerformance[cloId] = {
-          obtained,
-          maxMarks,
-          percentage,
-          threshold,
-          attained,
-          code: cloThresholdMap[cloId]?.code || clo.code || `CLO-${cloId.slice(0,4)}`,
-          statement: cloThresholdMap[cloId]?.statement || clo.statement || ''
-        };
-        
-        totalObtained += obtained;
-        totalMax += maxMarks;
-      });
-      
-      const totalPercentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
-      
-      return {
-        studentId,
-        rollNumber: marksStudent.rollNumber || studentInfo.rollNumber || 'N/A',
-        name: marksStudent.name || studentInfo.name || 'Unknown',
-        cloPerformance,
-        totalObtained,
-        totalMax,
-        totalPercentage,
-        overallAttained: Object.values(cloPerformance).every(clo => clo.attained)
-      };
-    });
-    
-    const statistics = {
-      totalStudents: studentPerformance.length,
-      studentsAboveThreshold: studentPerformance.filter(s => s.overallAttained).length,
-      cloStatistics: {},
-      classAverage: 0,
-      maxScore: 0,
-      minScore: 100
-    };
-    
-    assessmentClos.forEach(clo => {
-      const cloId = clo.id;
-      const scores = studentPerformance
-        .map(s => s.cloPerformance[cloId]?.percentage || 0)
-        .filter(s => s > 0);
-      
-      statistics.cloStatistics[cloId] = {
-        code: cloThresholdMap[cloId]?.code || clo.code || `CLO-${cloId.slice(0,4)}`,
-        maxMarks: clo.marksAllocated || 0,
-        average: scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0,
-        threshold: cloThresholdMap[cloId]?.threshold || 50,
-        studentsAttained: scores.filter(s => s >= (cloThresholdMap[cloId]?.threshold || 50)).length,
-        totalStudents: scores.length,
-        bloomLevel: cloThresholdMap[cloId]?.bloomLevel || clo.bloomLevel || ''
-      };
-    });
-    
-    const percentages = studentPerformance.map(s => s.totalPercentage);
-    statistics.classAverage = percentages.length > 0 
-      ? percentages.reduce((a, b) => a + b, 0) / percentages.length 
-      : 0;
-    statistics.maxScore = Math.max(...percentages, 0);
-    statistics.minScore = Math.min(...percentages, 100);
-    
-    return {
-      assessment: {
-        id: marksData.assessment?.id || marksData.id,
-        title: marksData.assessment?.title || marksData.title || 'Assessment',
-        type: marksData.assessment?.type || marksData.type,
-        maxMarks: marksData.assessment?.maxMarks || marksData.maxMarks,
-        totalQuestions: marksData.assessment?.totalQuestions || marksData.totalQuestions,
-        duration: marksData.assessment?.duration || marksData.duration,
-        isMarksFinalized: true,
-        conductedOn: marksData.assessment?.conductedOn || marksData.conductedOn
-      },
-      course: {
-        id: courseInfo.id,
-        code: courseInfo.code,
-        name: courseInfo.name,
-        credits: courseInfo.credits,
-        semester: courseInfo.semester,
-        year: courseInfo.year
-      },
-      clos: assessmentClos.map(clo => ({
-        id: clo.id,
-        code: cloThresholdMap[clo.id]?.code || clo.code || `CLO-${clo.id.slice(0,4)}`,
-        statement: cloThresholdMap[clo.id]?.statement || clo.statement || '',
-        bloomLevel: cloThresholdMap[clo.id]?.bloomLevel || clo.bloomLevel || '',
-        maxMarks: clo.marksAllocated || 0,
-        threshold: cloThresholdMap[clo.id]?.threshold || 50
-      })),
-      students: studentPerformance,
-      statistics,
-      generatedAt: new Date().toISOString()
-    };
   };
 
-  // Combine multiple assessment results
-  const combineAssessmentsPerformance = (assessmentsData, courseInfo) => {
-    if (!assessmentsData || assessmentsData.length === 0) return null;
-    
-    const combined = {
-      assessments: assessmentsData.map(a => a.assessment),
-      course: courseInfo,
-      clos: [],
-      students: [],
-      statistics: {
-        totalStudents: 0,
-        studentsAboveThreshold: 0,
-        cloStatistics: {},
-        classAverage: 0,
-        maxScore: 0,
-        minScore: 100,
-        totalAssessments: assessmentsData.length,
-        assessmentWiseStats: []
-      },
-      assessmentWiseData: assessmentsData,
-      generatedAt: new Date().toISOString()
-    };
-    
-    // Combine all unique CLOs
-    const cloMap = new Map();
-    assessmentsData.forEach(data => {
-      data.clos.forEach(clo => {
-        if (!cloMap.has(clo.id)) {
-          cloMap.set(clo.id, clo);
+  // ─── Submit to HOD ──────────────────────────────────────────────────────
+  const handleSubmitToHOD = async () => {
+    if (!performanceData || analysisModeRef.current !== 'all') return;
+    try {
+      setSubmitting(true);
+      setError(null);
+      setSuccessMessage('');
+
+      // FIX #1: assessmentIds now correctly come from performanceData.assessments
+      // which is built from finalizedAssessments (real IDs)
+      // FIX #2: removed submittedToHodById — backend derives from req.user
+      const reportData = {
+        reportName: `${performanceData.course.code} - Combined CLO Analysis (Sem ${performanceData.course.semester} ${performanceData.course.year})`,
+        reportType: "COMBINED",
+        academicYear: `${performanceData.course.year}-${(performanceData.course.year + 1).toString().slice(-2)}`,
+        reportParameters: {
+          courseId: performanceData.course.id,
+          semester: performanceData.course.semester,
+          year: performanceData.course.year,
+          assessmentIds: performanceData.assessments?.map(a => a.id).filter(Boolean) || []
         }
-      });
-    });
-    combined.clos = Array.from(cloMap.values());
-    
-    // Combine student data
-    const studentMap = new Map();
-    
-    assessmentsData.forEach((assessmentData, index) => {
-      assessmentData.students.forEach(student => {
-        if (!studentMap.has(student.studentId)) {
-          studentMap.set(student.studentId, {
-            studentId: student.studentId,
-            rollNumber: student.rollNumber,
-            name: student.name,
-            cloPerformance: {},
-            totalObtained: 0,
-            totalMax: 0,
-            assessmentsAttempted: 0,
-            assessmentsAttained: 0,
-            assessmentScores: []
-          });
-        }
-        
-        const existingStudent = studentMap.get(student.studentId);
-        
-        // Store individual assessment scores
-        existingStudent.assessmentScores.push({
-          assessmentId: assessmentData.assessment.id,
-          assessmentTitle: assessmentData.assessment.title,
-          totalPercentage: student.totalPercentage,
-          obtained: student.totalObtained,
-          maxMarks: student.totalMax,
-          attained: student.overallAttained
-        });
-        
-        // Merge CLO performance
-        Object.entries(student.cloPerformance).forEach(([cloId, perf]) => {
-          if (!existingStudent.cloPerformance[cloId]) {
-            existingStudent.cloPerformance[cloId] = {
-              obtained: 0,
-              maxMarks: 0,
-              assessmentsCount: 0,
-              attainedCount: 0,
-              percentages: []
-            };
-          }
-          
-          existingStudent.cloPerformance[cloId].obtained += perf.obtained;
-          existingStudent.cloPerformance[cloId].maxMarks += perf.maxMarks;
-          existingStudent.cloPerformance[cloId].assessmentsCount += 1;
-          existingStudent.cloPerformance[cloId].percentages.push(perf.percentage);
-          if (perf.attained) {
-            existingStudent.cloPerformance[cloId].attainedCount += 1;
-          }
-        });
-        
-        existingStudent.totalObtained += student.totalObtained;
-        existingStudent.totalMax += student.totalMax;
-        existingStudent.assessmentsAttempted += 1;
-        if (student.overallAttained) {
-          existingStudent.assessmentsAttained += 1;
-        }
-      });
-    });
-    
-    // Process combined student data
-    combined.students = Array.from(studentMap.values()).map(student => {
-      const cloPerformance = {};
-      Object.entries(student.cloPerformance).forEach(([cloId, data]) => {
-        const avgPercentage = data.maxMarks > 0 ? (data.obtained / data.maxMarks) * 100 : 0;
-        const attainmentRate = data.assessmentsCount > 0 ? (data.attainedCount / data.assessmentsCount) * 100 : 0;
-        
-        cloPerformance[cloId] = {
-          obtained: data.obtained,
-          maxMarks: data.maxMarks,
-          percentage: avgPercentage,
-          threshold: 50,
-          attained: attainmentRate >= 70, // Student attains CLO if they meet threshold in 70% of assessments
-          code: combined.clos.find(c => c.id === cloId)?.code || cloId,
-          assessmentsCount: data.assessmentsCount,
-          attainedCount: data.attainedCount,
-          attainmentRate,
-          percentages: data.percentages
-        };
-      });
-      
-      const totalPercentage = student.totalMax > 0 ? (student.totalObtained / student.totalMax) * 100 : 0;
-      const overallAttained = student.assessmentsAttempted > 0 ? 
-        (student.assessmentsAttained / student.assessmentsAttempted) >= 0.7 : false;
-      
-      return {
-        ...student,
-        cloPerformance,
-        totalPercentage,
-        overallAttained,
-        assessmentsAttempted: student.assessmentsAttempted,
-        assessmentsAttained: student.assessmentsAttained
       };
-    });
-    
-    // Calculate statistics
-    combined.statistics.totalStudents = combined.students.length;
-    combined.statistics.studentsAboveThreshold = combined.students.filter(s => s.overallAttained).length;
-    
-    combined.clos.forEach(clo => {
-      const cloId = clo.id;
-      const scores = combined.students
-        .map(s => s.cloPerformance[cloId]?.percentage || 0)
-        .filter(s => s > 0);
-      const attainmentRates = combined.students
-        .map(s => s.cloPerformance[cloId]?.attainmentRate || 0)
-        .filter(r => r > 0);
-      
-      combined.statistics.cloStatistics[cloId] = {
-        code: clo.code,
-        average: scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0,
-        threshold: clo.threshold || 50,
-        studentsAttained: combined.students.filter(s => s.cloPerformance[cloId]?.attainmentRate >= 70).length,
-        totalStudents: scores.length,
-        bloomLevel: clo.bloomLevel || '',
-        averageAttainmentRate: attainmentRates.length > 0 ? 
-          attainmentRates.reduce((a, b) => a + b, 0) / attainmentRates.length : 0
-      };
-    });
-    
-    // Calculate assessment-wise statistics
-    combined.statistics.assessmentWiseStats = assessmentsData.map(data => ({
-      title: data.assessment.title,
-      classAverage: data.statistics.classAverage,
-      studentsAttained: data.statistics.studentsAboveThreshold,
-      totalStudents: data.statistics.totalStudents,
-      maxScore: data.statistics.maxScore,
-      minScore: data.statistics.minScore
-    }));
-    
-    const percentages = combined.students.map(s => s.totalPercentage);
-    combined.statistics.classAverage = percentages.length > 0 
-      ? percentages.reduce((a, b) => a + b, 0) / percentages.length 
-      : 0;
-    combined.statistics.maxScore = Math.max(...percentages, 0);
-    combined.statistics.minScore = Math.min(...percentages, 100);
-    
-    return combined;
-  };
 
-  // Sort students
-  const getSortedStudents = useMemo(() => {
-    if (!performanceData?.students) return [];
-    
-    return [...performanceData.students].sort((a, b) => {
-      let aVal, bVal;
-      
-      switch (sortConfig.key) {
-        case 'name':
-          aVal = a.name;
-          bVal = b.name;
-          break;
-        case 'rollNumber':
-          aVal = a.rollNumber;
-          bVal = b.rollNumber;
-          break;
-        case 'totalPercentage':
-          aVal = a.totalPercentage;
-          bVal = b.totalPercentage;
-          break;
-        case 'assessmentsAttained':
-          aVal = a.assessmentsAttained;
-          bVal = b.assessmentsAttained;
-          break;
-        default:
-          aVal = a.totalPercentage;
-          bVal = b.totalPercentage;
-      }
-      
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [performanceData, sortConfig]);
+      console.log('📤 Submitting report payload:', reportData);
+      console.log('📋 Assessment IDs:', reportData.reportParameters.assessmentIds);
 
-  // Filter students
-  const getFilteredStudents = useMemo(() => {
-    if (!studentFilter.trim()) return getSortedStudents;
-    
-    const filterLower = studentFilter.toLowerCase();
-    return getSortedStudents.filter(s => 
-      s.name.toLowerCase().includes(filterLower) ||
-      s.rollNumber.toLowerCase().includes(filterLower)
-    );
-  }, [getSortedStudents, studentFilter]);
-
-  // Handle assessment selection
-  const handleAssessmentSelect = async (assessmentId) => {
-    if (assessmentId === 'all') {
-      setAnalysisMode('all');
-      setPerformanceData(null);
-      setLoading(true);
+      await facultyApi.submitReportToHOD(reportData);
       
-      try {
-        const [studentsResponse, closResponse] = await Promise.all([
-          assessmentApi.getCourseStudents(course.id, {
-            semester: course.semester,
-            year: course.year
-          }),
-          assessmentApi.getCourseClos(course.id)
-        ]);
-        
-        const studentsData = getResponseData(studentsResponse)?.students || [];
-        const closData = getResponseData(closResponse) || [];
-        
-        await fetchAllAssessmentsPerformance(availableAssessments, studentsData, closData);
-      } catch (err) {
-        console.error('Error loading all assessments:', err);
-        setError('Failed to load all assessments data');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      const assessment = availableAssessments.find(a => a.id === assessmentId);
-      if (assessment) {
-        setSelectedAssessment(assessment);
-        setAnalysisMode('single');
-        setPerformanceData(null);
-        setLoading(true);
-        
-        try {
-          const [studentsResponse, closResponse] = await Promise.all([
-            assessmentApi.getCourseStudents(course.id, {
-              semester: course.semester,
-              year: course.year
-            }),
-            assessmentApi.getCourseClos(course.id)
-          ]);
-          
-          const studentsData = getResponseData(studentsResponse)?.students || [];
-          const closData = getResponseData(closResponse) || [];
-          
-          await fetchAssessmentMarks(assessment.id, studentsData, closData);
-        } catch (err) {
-          console.error('Error selecting assessment:', err);
-          setError('Failed to load assessment data');
-        } finally {
-          setLoading(false);
-        }
-      }
+      // Set submission status to true after successful submission
+      setIsReportSubmitted(true);
+      
+      setSuccessMessage('Report submitted to HOD successfully!');
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (err) {
+      console.error('Error submitting report to HOD:', err);
+      setError(err.response?.data?.message || 'Failed to submit report to HOD');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Toggle section expansion
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
-  // Export to CSV
-  const exportToCSV = () => {
+  // ─── Export CSV ─────────────────────────────────────────────────────────
+  const handleExportCSV = () => {
     if (!performanceData) return;
-    
-    let csv = 'Roll Number,Student Name,';
-    
-    if (analysisMode === 'all') {
-      performanceData.assessments.forEach(assessment => {
-        csv += `${assessment.title} (%),`;
-      });
-    }
-    
-    performanceData.clos.forEach(clo => {
-      csv += `${clo.code} (%),`;
-    });
-    
-    if (analysisMode === 'all') {
-      csv += 'Assessments Attempted,Assessments Attained,Attainment Rate,';
-    }
-    
-    csv += 'Overall Percentage,Overall Status\n';
-    
-    performanceData.students.forEach(student => {
-      csv += `${student.rollNumber},${student.name},`;
-      
-      if (analysisMode === 'all') {
-        student.assessmentScores.forEach(score => {
-          csv += `${score.totalPercentage.toFixed(1)},`;
-        });
-      }
-      
-      performanceData.clos.forEach(clo => {
-        const perf = student.cloPerformance[clo.id];
-        csv += `${perf?.percentage?.toFixed(1) || 0},`;
-      });
-      
-      if (analysisMode === 'all') {
-        csv += `${student.assessmentsAttempted},`;
-        csv += `${student.assessmentsAttained},`;
-        const rate = student.assessmentsAttempted ? 
-          ((student.assessmentsAttained / student.assessmentsAttempted) * 100).toFixed(1) : 0;
-        csv += `${rate}%,`;
-      }
-      
-      csv += `${student.totalPercentage.toFixed(1)}%,`;
-      csv += `${student.overallAttained ? 'Met' : 'Not Met'}\n`;
-    });
-    
-    // Add summary
-    csv += '\n--- Summary ---\n';
-    csv += `Class Average,${performanceData.statistics.classAverage.toFixed(1)}%\n`;
-    csv += `Students Meeting Threshold,${performanceData.statistics.studentsAboveThreshold}/${performanceData.statistics.totalStudents}\n`;
-    csv += `Performance Range,${performanceData.statistics.minScore.toFixed(0)}% - ${performanceData.statistics.maxScore.toFixed(0)}%\n`;
-    
-    if (analysisMode === 'all') {
-      csv += `Total Assessments Analyzed,${performanceData.assessments.length}\n`;
-    }
-    
-    const fileName = analysisMode === 'all' 
-      ? `${performanceData.course.code}_all_assessments.csv`
-      : `${performanceData.course.code}_${performanceData.assessment.title}.csv`;
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const isAll = analysisModeRef.current === 'all';
+    const csv = buildCSV(performanceData, isAll);
+    const courseCode = (performanceData.course?.code || 'course').replace(/[^a-z0-9]/gi, '_');
+    const suffix = isAll
+      ? 'all_assessments'
+      : (performanceData.assessment?.title || 'assessment').replace(/[^a-z0-9]/gi, '_');
+    downloadBlob(csv, `${courseCode}_clo_analysis_${suffix}.csv`.toLowerCase(), 'text/csv;charset=utf-8;');
   };
 
-  // Initial data fetch
+  // ─── Export PDF ─────────────────────────────────────────────────────────
+  // Pure JS PDF via printable window (no external deps needed)
+  const handleExportPDF = () => {
+    if (!performanceData) return;
+    const isAll = analysisModeRef.current === 'all';
+    const cloList = Object.values(performanceData.cloAnalysis);
+    const courseCode = performanceData.course.code;
+    const courseName = performanceData.course.name;
+    const title = isAll
+      ? `${courseCode} — Combined CLO Analysis`
+      : `${courseCode} — ${performanceData.assessment?.title} CLO Analysis`;
+
+    const cloRows = cloList.map(clo => `
+      <tr>
+        <td><strong>${clo.code}</strong></td>
+        <td>${clo.bloomLevel || 'N/A'}</td>
+        <td>${clo.threshold}%</td>
+        <td>${clo.statistics.attainedStudents}/${clo.statistics.totalStudents}</td>
+        <td>${clo.statistics.classAttainment.toFixed(1)}%</td>
+        <td class="level-${clo.directAttainment.level}">Level ${clo.directAttainment.level} (${clo.directAttainment.label})</td>
+      </tr>
+    `).join('');
+
+    const studentRows = performanceData.students.slice(0, 100).map(student => {
+      const cloCells = cloList.map(clo => {
+        const perf = student.cloPerformance[clo.id];
+        const pct = perf?.averagePercentage ?? perf?.percentage ?? 0;
+        const lvl = perf?.attainmentLevel ?? calculateAttainmentLevel(pct, clo.threshold);
+        return `<td>${pct.toFixed(1)}%</td><td>L${lvl}</td>`;
+      }).join('');
+      return `<tr><td>${student.rollNumber}</td><td>${student.name}</td>${cloCells}<td><strong>${student.totalPercentage.toFixed(1)}%</strong></td></tr>`;
+    }).join('');
+
+    const cloHeaders = cloList.map(c => `<th colspan="2">${c.code}</th>`).join('');
+    const cloSubHeaders = cloList.map(() => `<th>Score%</th><th>Lvl</th>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><title>${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 20px; }
+      h1 { font-size: 16px; color: #1e40af; margin-bottom: 4px; }
+      h2 { font-size: 13px; color: #334155; margin: 16px 0 8px; }
+      .meta { color: #64748b; font-size: 10px; margin-bottom: 20px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 10px; }
+      th { background: #f1f5f9; padding: 6px 8px; text-align: left; border: 1px solid #e2e8f0; font-weight: 600; }
+      td { padding: 5px 8px; border: 1px solid #e2e8f0; }
+      tr:nth-child(even) { background: #f8fafc; }
+      .level-3 { color: #0d6832; font-weight: 600; }
+      .level-2 { color: #925d00; font-weight: 600; }
+      .level-1 { color: #b45a1c; font-weight: 600; }
+      .level-0 { color: #ac2c34; font-weight: 600; }
+      @media print { body { margin: 0; } }
+    </style></head><body>
+    <h1>${title}</h1>
+    <div class="meta">Course: ${courseCode} — ${courseName} &nbsp;|&nbsp; Semester: ${performanceData.course.semester} &nbsp;|&nbsp; Year: ${performanceData.course.year} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+
+    <h2>CLO Attainment Summary</h2>
+    <table>
+      <thead><tr><th>CLO Code</th><th>Bloom's Level</th><th>Threshold</th><th>Students Attained</th><th>Class Attainment %</th><th>Direct Attainment Level</th></tr></thead>
+      <tbody>${cloRows}</tbody>
+    </table>
+
+    <h2>Student-wise CLO Performance ${performanceData.students.length > 100 ? '(first 100 students)' : ''}</h2>
+    <table>
+      <thead>
+        <tr><th>Roll No.</th><th>Name</th>${cloHeaders}<th>Overall %</th></tr>
+        <tr><th></th><th></th>${cloSubHeaders}<th></th></tr>
+      </thead>
+      <tbody>${studentRows}</tbody>
+    </table>
+    </body></html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) { alert('Please allow popups for PDF export'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
   useEffect(() => {
-    if (course) {
-      fetchAllData();
-    }
+    if (course) fetchAllData();
   }, [course, assessmentId, fetchAllData]);
 
-  // Render loading state
-  if (loading) {
-    return (
-      <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
-        {showHeader && (
-          <div className="analysis-header">
-            <h2><BarChart size={24} /> Student Performance Analysis</h2>
-          </div>
-        )}
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Loading performance data...</p>
-        </div>
-      </div>
-    );
-  }
+  // ─── Render states ─────────────────────────────────────────────────────
+  if (loading) return (
+    <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
+      <div className="loading-state"><div className="spinner" /><p>Loading CLO performance data…</p></div>
+    </div>
+  );
 
-  // Render error state
-  if (error) {
-    return (
-      <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
-        {showHeader && (
-          <div className="analysis-header">
-            <h2><BarChart size={24} /> Student Performance Analysis</h2>
-          </div>
-        )}
-        <div className="error-state">
-          <AlertTriangle size={48} />
-          <h3>Analysis Unavailable</h3>
-          <p>{error}</p>
-          {onClose && (
-            <button className="btn btn-outline" onClick={onClose}>
-              Close
-            </button>
-          )}
-        </div>
+  if (error && !performanceData) return (
+    <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
+      <div className="error-state">
+        <AlertTriangle size={48} />
+        <h3>Analysis Unavailable</h3>
+        <p>{error}</p>
+        {onClose && <button className="btn btn-outline" onClick={onClose}>Close</button>}
       </div>
-    );
-  }
+    </div>
+  );
 
-  // Render no data state
-  if (!performanceData) {
-    return (
-      <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
-        {showHeader && (
-          <div className="analysis-header">
-            <h2><BarChart size={24} /> Student Performance Analysis</h2>
-            {onClose && (
-              <button className="btn-close" onClick={onClose}>×</button>
-            )}
-          </div>
-        )}
-        <div className="empty-state">
-          <Target size={64} />
-          <h3>No Performance Data Available</h3>
-          <p>No finalized assessments found for this course.</p>
-        </div>
+  if (!performanceData) return (
+    <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
+      <div className="empty-state">
+        <Target size={64} />
+        <h3>No CLO Performance Data Available</h3>
+        <p>No finalized assessments found for this course.</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // Main render
+  const cloList = Object.values(performanceData.cloAnalysis);
+  const isAllMode = analysisMode === 'all';
+
+  // ─── Main render ────────────────────────────────────────────────────────
   return (
     <div className={`performance-analysis ${className} ${standalone ? 'standalone' : ''}`}>
+
       {showHeader && (
-        <div className="analysis-header">
-          <div className="header-title">
-            <h2>
-              <BarChart size={24} /> 
-              {analysisMode === 'all' ? (
-                <>Combined Analysis: All Assessments ({performanceData.assessments.length})</>
-              ) : (
-                <>Performance Analysis: {performanceData.assessment.title}</>
-              )}
-            </h2>
-            {analysisMode === 'all' ? (
-              <span className="finalized-badge multi-assessment">
-                <Layers size={16} /> Combined Analysis
+        <PerformanceHeader
+          isAllMode={isAllMode}
+          performanceData={performanceData}
+          availableAssessments={availableAssessments}
+          selectedAssessment={selectedAssessment}
+          submitting={submitting}
+          isReportSubmitted={isReportSubmitted} // Pass submission status to header
+          onAssessmentSelect={handleAssessmentSelect}
+          onSubmitToHOD={handleSubmitToHOD}
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+          onClose={onClose}
+        />
+      )}
+
+      {!showHeader && (
+        <div className="actions-bar-no-header">
+          {isAllMode && (
+            <button 
+              className={`btn-submit-hod ${isReportSubmitted ? 'btn-submitted' : ''}`}
+              onClick={handleSubmitToHOD} 
+              disabled={submitting || isReportSubmitted}
+              title={isReportSubmitted ? 'Report already submitted to HOD' : 'Submit to HOD'}
+            >
+              <span>
+                {submitting ? 'Submitting...' : isReportSubmitted ? 'Already Submitted' : 'Submit to HOD'}
               </span>
-            ) : (
-              <span className="finalized-badge">
-                <CheckCircle size={16} /> Finalized Assessment
-              </span>
-            )}
-          </div>
-          <div className="header-actions">
-            {availableAssessments.length > 0 && (
-              <div className="assessment-selector-header">
-                <select
-                  className="form-control-sm"
-                  value={analysisMode === 'all' ? 'all' : (selectedAssessment?.id || '')}
-                  onChange={(e) => handleAssessmentSelect(e.target.value)}
-                >
-                  <option value="" disabled>Select assessment</option>
-                  {availableAssessments.map(a => (
-                    <option key={a.id} value={a.id}>{a.title}</option>
-                  ))}
-                  {availableAssessments.length > 1 && (
-                    <option value="all">📊 All Assessments Combined</option>
-                  )}
-                </select>
-              </div>
-            )}
-            
-            <button className="btn-export" onClick={exportToCSV} title="Export to CSV">
-              <Download size={18} />
-              Export
+              {isReportSubmitted && <CheckCircle size={16} className="submitted-check" />}
             </button>
-            {onClose && (
-              <button className="btn-close" onClick={onClose}>×</button>
-            )}
-          </div>
+          )}
+          <button className="btn-export" onClick={handleExportCSV}><span>Export CSV</span></button>
+          <button className="btn-export btn-export-pdf" onClick={handleExportPDF}><span>Export PDF</span></button>
         </div>
       )}
 
+      {successMessage && (
+        <div className="success-message"><CheckCircle size={20} /><span>{successMessage}</span></div>
+      )}
+      {error && performanceData && (
+        <div className="error-inline"><AlertTriangle size={20} /><span>{error}</span></div>
+      )}
+
       <div className="analysis-content">
-        {/* Assessment Info Banner */}
+        {/* Course Info Banner */}
         <div className="assessment-info-banner">
-          <div className="info-item">
-            <BookOpen size={18} />
-            <span className="label">Course:</span>
-            <span className="value">{performanceData.course.code} - {performanceData.course.name}</span>
-          </div>
-          {analysisMode === 'single' ? (
+          <div className="info-item"><BookOpen size={18} /><span className="label">Course:</span><span className="value">{performanceData.course.code} — {performanceData.course.name}</span></div>
+          <div className="info-item"><Users size={18} /><span className="label">Students:</span><span className="value">{performanceData.students.length}</span></div>
+          <div className="info-item"><Layers size={18} /><span className="label">CLOs:</span><span className="value">{cloList.length}</span></div>
+          {!isAllMode && performanceData.assessment && (
             <>
-              <div className="info-item">
-                <FileText size={18} />
-                <span className="label">Assessment Type:</span>
-                <span className="value">{performanceData.assessment.type || 'N/A'}</span>
-              </div>
-              <div className="info-item">
-                <Star size={18} />
-                <span className="label">Total Marks:</span>
-                <span className="value">{performanceData.assessment.maxMarks}</span>
-              </div>
-              <div className="info-item">
-                <Clock size={18} />
-                <span className="label">Duration:</span>
-                <span className="value">{performanceData.assessment.duration || 'N/A'} mins</span>
-              </div>
+              <div className="info-item"><Star size={18} /><span className="label">Max Marks:</span><span className="value">{performanceData.assessment.maxMarks}</span></div>
+              {performanceData.assessment.duration && (
+                <div className="info-item"><Clock size={18} /><span className="label">Duration:</span><span className="value">{performanceData.assessment.duration} mins</span></div>
+              )}
             </>
-          ) : (
-            <>
-              <div className="info-item">
-                <Layers size={18} />
-                <span className="label">Assessments Analyzed:</span>
-                <span className="value">{performanceData.assessments.length}</span>
-              </div>
-              <div className="info-item">
-                <Users size={18} />
-                <span className="label">Total Students:</span>
-                <span className="value">{performanceData.statistics.totalStudents}</span>
-              </div>
-            </>
+          )}
+          {isAllMode && (
+            <div className="info-item"><FileText size={18} /><span className="label">Assessments:</span><span className="value">{performanceData.assessments?.length || 0}</span></div>
           )}
         </div>
 
-        {/* Summary Cards */}
-        <div className="summary-cards">
-          <div className="summary-card" onClick={() => toggleSection('summary')}>
-            <div className="card-header">
-              <TrendingUp size={20} />
-              <h3>Overall Average</h3>
-              {expandedSections.summary ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-            </div>
-            <div className="card-value">{performanceData.statistics.classAverage.toFixed(1)}%</div>
-          </div>
-
-          <div className="summary-card" onClick={() => toggleSection('summary')}>
-            <div className="card-header">
-              <Users size={20} />
-              <h3>Students Meeting Threshold</h3>
-            </div>
-            <div className="card-value">
-              {performanceData.statistics.studentsAboveThreshold}/{performanceData.statistics.totalStudents}
-            </div>
-            <div className="card-subtext">
-              {((performanceData.statistics.studentsAboveThreshold / performanceData.statistics.totalStudents) * 100).toFixed(1)}%
-            </div>
-          </div>
-
-          <div className="summary-card" onClick={() => toggleSection('summary')}>
-            <div className="card-header">
-              <Award size={20} />
-              <h3>Performance Range</h3>
-            </div>
-            <div className="card-value">
-              {performanceData.statistics.minScore.toFixed(0)}% - {performanceData.statistics.maxScore.toFixed(0)}%
-            </div>
-          </div>
-
-          <div className="summary-card" onClick={() => toggleSection('summary')}>
-            <div className="card-header">
-              <Target size={20} />
-              <h3>CLOs Assessed</h3>
-            </div>
-            <div className="card-value">{performanceData.clos.length}</div>
-          </div>
-        </div>
-
-        {/* Detailed Summary Table */}
-        {expandedSections.summary && (
-          <div className="detailed-summary">
-            <h3>Detailed Performance Summary</h3>
-            <table className="summary-table">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th>Value</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Total Students</td>
-                  <td>{performanceData.statistics.totalStudents}</td>
-                  <td>Number of students who attempted the assessment(s)</td>
-                </tr>
-                <tr>
-                  <td>Overall Class Average</td>
-                  <td>{performanceData.statistics.classAverage.toFixed(1)}%</td>
-                  <td>Mean score across all students and assessments</td>
-                </tr>
-                <tr>
-                  <td>Highest Score</td>
-                  <td>{performanceData.statistics.maxScore.toFixed(1)}%</td>
-                  <td>Maximum score achieved</td>
-                </tr>
-                <tr>
-                  <td>Lowest Score</td>
-                  <td>{performanceData.statistics.minScore.toFixed(1)}%</td>
-                  <td>Minimum score achieved</td>
-                </tr>
-                <tr>
-                  <td>Students Above Threshold</td>
-                  <td>{performanceData.statistics.studentsAboveThreshold}/{performanceData.statistics.totalStudents}</td>
-                  <td>{((performanceData.statistics.studentsAboveThreshold / performanceData.statistics.totalStudents) * 100).toFixed(1)}% of students met all CLO thresholds</td>
-                </tr>
-                {analysisMode === 'all' && (
-                  <tr>
-                    <td>Total Assessments</td>
-                    <td>{performanceData.assessments.length}</td>
-                    <td>Number of assessments included in analysis</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Assessment-wise Summary (for All Assessments mode) */}
-        {analysisMode === 'all' && expandedSections.summary && (
-          <div className="assessment-wise-summary">
-            <h4>Assessment-wise Performance</h4>
-            <table className="assessment-wise-table">
-              <thead>
-                <tr>
-                  <th>Assessment</th>
-                  <th>Class Average</th>
-                  <th>Students Attained</th>
-                  <th>Attainment Rate</th>
-                  <th>Range</th>
-                </tr>
-              </thead>
-              <tbody>
-                {performanceData.assessmentWiseData.map((data, index) => (
-                  <tr key={index}>
-                    <td><strong>{data.assessment.title}</strong></td>
-                    <td>{data.statistics.classAverage.toFixed(1)}%</td>
-                    <td>{data.statistics.studentsAboveThreshold}/{data.statistics.totalStudents}</td>
-                    <td>
-                      {((data.statistics.studentsAboveThreshold / data.statistics.totalStudents) * 100).toFixed(1)}%
-                    </td>
-                    <td>{data.statistics.minScore.toFixed(0)}% - {data.statistics.maxScore.toFixed(0)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* CLO Analysis Section */}
-        <div className="section-header" onClick={() => toggleSection('cloAnalysis')}>
-          <h3><Target size={20} /> Course Learning Outcomes Analysis</h3>
-          {expandedSections.cloAnalysis ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-        </div>
-
-        {expandedSections.cloAnalysis && (
-          <div className="clo-analysis-section">
-            <table className="clo-table">
-              <thead>
-                <tr>
-                  <th>CLO Code</th>
-                  <th>Description</th>
-                  <th>Bloom's Level</th>
-                  <th>Threshold</th>
-                  <th>Class Average</th>
-                  <th>Students Attained</th>
-                  <th>Attainment Rate</th>
-                  {analysisMode === 'all' && <th>Avg. Attainment Rate</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {performanceData.clos.map(clo => {
-                  const stats = performanceData.statistics.cloStatistics[clo.id];
-                  const attainmentRate = stats ? (stats.studentsAttained / stats.totalStudents) * 100 : 0;
-                  
-                  return (
-                    <tr 
-                      key={clo.id} 
-                      className={attainmentRate >= 70 ? 'high-attainment' : attainmentRate >= 50 ? 'medium-attainment' : 'low-attainment'}
-                      onClick={() => setSelectedClo(selectedClo === clo.id ? null : clo.id)}
-                    >
-                      <td><strong>{clo.code}</strong></td>
-                      <td title={clo.statement}>{clo.statement?.substring(0, 60)}...</td>
-                      <td>{clo.bloomLevel || 'N/A'}</td>
-                      <td>{clo.threshold}%</td>
-                      <td>{stats?.average.toFixed(1)}%</td>
-                      <td>{stats?.studentsAttained}/{stats?.totalStudents}</td>
-                      <td>
-                        <div className="attainment-cell">
-                          <span>{attainmentRate.toFixed(1)}%</span>
-                          <div className="attainment-bar">
-                            <div 
-                              className="attainment-progress"
-                              style={{ width: `${attainmentRate}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </td>
-                      {analysisMode === 'all' && (
-                        <td>{stats?.averageAttainmentRate?.toFixed(1) || 0}%</td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* CLO Details for selected CLO */}
-            {selectedClo && analysisMode === 'all' && (
-              <div className="clo-details-panel">
-                <h4>CLO {performanceData.clos.find(c => c.id === selectedClo)?.code} - Detailed Performance</h4>
-                <table className="clo-details-table">
-                  <thead>
-                    <tr>
-                      <th>Student</th>
-                      <th>Roll No.</th>
-                      {performanceData.assessments.map(assessment => (
-                        <th key={assessment.id}>{assessment.title}</th>
-                      ))}
-                      <th>Overall</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {performanceData.students.slice(0, 10).map(student => {
-                      const cloPerf = student.cloPerformance[selectedClo];
-                      return (
-                        <tr key={student.studentId}>
-                          <td>{student.name}</td>
-                          <td>{student.rollNumber}</td>
-                          {cloPerf?.percentages?.map((pct, idx) => (
-                            <td key={idx} className={pct >= 50 ? 'attained-cell' : 'not-attained-cell'}>
-                              {pct.toFixed(1)}%
-                            </td>
-                          ))}
-                          <td className={cloPerf?.attained ? 'attained-cell' : 'not-attained-cell'}>
-                            <strong>{cloPerf?.percentage.toFixed(1)}%</strong>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {performanceData.students.length > 10 && (
-                  <p className="more-students-note">Showing 10 of {performanceData.students.length} students</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Student Performance Section */}
-        <div className="section-header" onClick={() => toggleSection('studentPerformance')}>
-          <h3><Users size={20} /> Student Performance Details</h3>
-          {expandedSections.studentPerformance ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-        </div>
-
-        {expandedSections.studentPerformance && (
-          <div className="student-performance-section">
-            <div className="table-controls">
-              <div className="search-box">
-                <Filter size={18} />
-                <input
-                  type="text"
-                  placeholder="Search by name or roll number..."
-                  value={studentFilter}
-                  onChange={(e) => setStudentFilter(e.target.value)}
-                />
-              </div>
-              
-              <div className="sort-controls">
-                <span>Sort by: </span>
-                <select
-                  value={sortConfig.key}
-                  onChange={(e) => setSortConfig({ key: e.target.value, direction: 'desc' })}
-                >
-                  <option value="totalPercentage">Overall Percentage</option>
-                  <option value="name">Name</option>
-                  <option value="rollNumber">Roll Number</option>
-                  {analysisMode === 'all' && (
-                    <option value="assessmentsAttained">Assessments Attained</option>
-                  )}
-                </select>
-                <button
-                  className="sort-direction"
-                  onClick={() => setSortConfig(prev => ({
-                    ...prev,
-                    direction: prev.direction === 'asc' ? 'desc' : 'asc'
-                  }))}
-                >
-                  {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                </button>
-              </div>
-            </div>
-
-            <div className="student-table-container">
-              <table className="student-table">
-                <thead>
-                  <tr>
-                    <th>Roll No.</th>
-                    <th>Student Name</th>
-                    {analysisMode === 'all' && (
-                      <th>Assessments</th>
-                    )}
-                    {performanceData.clos.map(clo => (
-                      <th key={clo.id} title={clo.statement}>
-                        {clo.code}
-                      </th>
-                    ))}
-                    <th>Overall</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getFilteredStudents.map(student => (
-                    <tr key={student.studentId} className={student.overallAttained ? 'attained-row' : 'not-attained-row'}>
-                      <td>{student.rollNumber}</td>
-                      <td>{student.name}</td>
-                      {analysisMode === 'all' && (
-                        <td>
-                          <span className="assessment-count">
-                            {student.assessmentsAttained}/{student.assessmentsAttempted}
-                          </span>
-                          <small className="attainment-rate">
-                            ({((student.assessmentsAttained / student.assessmentsAttempted) * 100).toFixed(0)}%)
-                          </small>
-                        </td>
-                      )}
-                      {performanceData.clos.map(clo => {
-                        const perf = student.cloPerformance[clo.id];
-                        return (
-                          <td key={clo.id} className={perf?.attained ? 'attained' : 'not-attained'}>
-                            <div className="clo-score">
-                              <span className="percentage">{perf?.percentage.toFixed(1)}%</span>
-                              {analysisMode === 'all' && perf?.assessmentsCount > 1 && (
-                                <small className="count">({perf.assessmentsCount} assessments)</small>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      <td>
-                        <strong>{student.totalPercentage.toFixed(1)}%</strong>
-                      </td>
-                      <td>
-                        {student.overallAttained ? (
-                          <span className="status-badge success">
-                            <CheckCircle size={14} /> Met
-                          </span>
-                        ) : (
-                          <span className="status-badge warning">
-                            <AlertTriangle size={14} /> Not Met
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {getFilteredStudents.length === 0 && (
-              <div className="no-results">
-                <AlertTriangle size={32} />
-                <p>No students match your search</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Assessment Details Section */}
-        <div className="section-header" onClick={() => toggleSection('assessmentDetails')}>
-          <h3><FileText size={20} /> Assessment Details</h3>
-          {expandedSections.assessmentDetails ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-        </div>
-
-        {expandedSections.assessmentDetails && (
+        <Section title="Assessment Details" icon={FileText} sectionKey="assessmentDetails" expanded={expandedSections.assessmentDetails} onToggle={toggleSection}>
           <div className="assessment-details-section">
-            {analysisMode === 'single' ? (
-              // Single assessment view
-              <>
-                <div className="details-grid">
-                  <div className="detail-item">
-                    <h4>Assessment Information</h4>
-                    <table className="details-table">
-                      <tbody>
-                        <tr>
-                          <td>Title:</td>
-                          <td><strong>{performanceData.assessment.title}</strong></td>
-                        </tr>
-                        <tr>
-                          <td>Type:</td>
-                          <td>{performanceData.assessment.type || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                          <td>Total Marks:</td>
-                          <td>{performanceData.assessment.maxMarks}</td>
-                        </tr>
-                        <tr>
-                          <td>Duration:</td>
-                          <td>{performanceData.assessment.duration || 'N/A'} minutes</td>
-                        </tr>
-                        <tr>
-                          <td>Conducted On:</td>
-                          <td>{performanceData.assessment.conductedOn ? new Date(performanceData.assessment.conductedOn).toLocaleDateString() : 'N/A'}</td>
-                        </tr>
-                        <tr>
-                          <td>Status:</td>
-                          <td><span className="finalized-tag">Finalized</span></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="detail-item">
-                    <h4>Marks Distribution by CLO</h4>
-                    <table className="marks-table">
-                      <thead>
-                        <tr>
-                          <th>CLO</th>
-                          <th>Max Marks</th>
-                          <th>Weightage</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {performanceData.clos.map(clo => (
-                          <tr key={clo.id}>
-                            <td>{clo.code}</td>
-                            <td>{clo.maxMarks}</td>
-                            <td>{((clo.maxMarks / performanceData.assessment.maxMarks) * 100).toFixed(1)}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr>
-                          <td><strong>Total</strong></td>
-                          <td><strong>{performanceData.assessment.maxMarks}</strong></td>
-                          <td><strong>100%</strong></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="performance-distribution">
-                  <h4>Performance Distribution</h4>
-                  <div className="distribution-bars">
-                    {['0-20', '21-40', '41-60', '61-80', '81-100'].map(range => {
-                      const [min, max] = range.split('-').map(Number);
-                      const count = performanceData.students.filter(s => 
-                        s.totalPercentage >= min && s.totalPercentage <= max
-                      ).length;
-                      const percentage = (count / performanceData.students.length) * 100;
-                      
-                      return (
-                        <div key={range} className="distribution-item">
-                          <span className="range-label">{range}%</span>
-                          <div className="distribution-bar">
-                            <div 
-                              className="bar-fill"
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
-                          <span className="count-label">{count} students ({percentage.toFixed(1)}%)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            ) : (
-              // All assessments view
-              <div className="all-assessments-details">
-                <h4>All Assessments Overview</h4>
-                <div className="assessments-grid">
-                  {performanceData.assessmentWiseData.map((data, index) => (
-                    <div key={index} className="assessment-card">
-                      <h5>{data.assessment.title}</h5>
-                      <div className="assessment-card-stats">
-                        <div className="stat">
-                          <span className="label">Type:</span>
-                          <span className="value">{data.assessment.type || 'N/A'}</span>
-                        </div>
-                        <div className="stat">
-                          <span className="label">Max Marks:</span>
-                          <span className="value">{data.assessment.maxMarks}</span>
-                        </div>
-                        <div className="stat">
-                          <span className="label">Class Average:</span>
-                          <span className="value">{data.statistics.classAverage.toFixed(1)}%</span>
-                        </div>
-                        <div className="stat">
-                          <span className="label">Attainment:</span>
-                          <span className="value">
-                            {((data.statistics.studentsAboveThreshold / data.statistics.totalStudents) * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="clo-coverage">
-                  <h4>CLO Coverage Across Assessments</h4>
-                  <table className="coverage-table">
-                    <thead>
-                      <tr>
-                        <th>CLO</th>
-                        {performanceData.assessments.map(assessment => (
-                          <th key={assessment.id}>{assessment.title}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {performanceData.clos.map(clo => {
-                        const stats = performanceData.statistics.cloStatistics[clo.id];
-                        return (
-                          <tr key={clo.id}>
-                            <td><strong>{clo.code}</strong></td>
-                            {performanceData.assessmentWiseData.map(data => {
-                              const hasClo = data.clos.some(c => c.id === clo.id);
-                              return (
-                                <td key={data.assessment.id} className={hasClo ? 'covered' : 'not-covered'}>
-                                  {hasClo ? '✓' : '✗'}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+            <AssessmentDetails isAllMode={isAllMode} performanceData={performanceData} />
           </div>
-        )}
+        </Section>
+
+        <Section title="Quick Glance: CLO Attainment Dashboard" icon={BarChart} sectionKey="quickGlance" expanded={expandedSections.quickGlance} onToggle={toggleSection}>
+          <QuickGlanceDashboard cloList={cloList} />
+        </Section>
+
+        <Section title="CLO-wise Attainment Analysis" icon={Target} sectionKey="cloWiseAnalysis" expanded={expandedSections.cloWiseAnalysis} onToggle={toggleSection}>
+          <CLOAnalysisSection cloList={cloList} calculateAttainmentLevel={calculateAttainmentLevel} />
+        </Section>
+
+        <Section title="CLO Attainment Summary" icon={Award} sectionKey="attainmentSummary" expanded={expandedSections.attainmentSummary} onToggle={toggleSection}>
+          <AttainmentSummary cloList={cloList} />
+        </Section>
+
+        <Section title="Student-wise CLO Performance" icon={Users} sectionKey="studentPerformance" expanded={expandedSections.studentPerformance} onToggle={toggleSection}>
+          <StudentPerformanceTable
+            performanceData={performanceData}
+            cloList={cloList}
+            isAllMode={isAllMode}
+            calculateAttainmentLevel={calculateAttainmentLevel}
+          />
+        </Section>
       </div>
     </div>
   );

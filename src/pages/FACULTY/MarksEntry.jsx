@@ -81,11 +81,6 @@ const MarksEntry = ({
       alert('Please select an assessment first');
       return;
     }
-    
-    if (!window.confirm('Are you sure you want to finalize marks?\n\n⚠️ Once finalized, marks cannot be modified or altered in any way.')) {
-      return;
-    }
-    
     try {
       setIsFinalizing(true);
       console.log('[DEBUG] Finalizing marks for assessment:', selectedAssessment.id);
@@ -95,16 +90,10 @@ const MarksEntry = ({
       
       const responseData = getResponseData(response);
       
-      if (responseData?.success) {
-        // Update local state and refresh status
+   
         await checkFinalizationStatus(selectedAssessment.id);
         
-        // Show success message
         showNotification('✅ Marks finalized successfully! Marks are now locked and cannot be modified.', 'success');
-      } else {
-        alert(`Failed to finalize marks: ${responseData?.message || 'Unknown error'}`);
-        showNotification(`❌ ${responseData?.message || 'Failed to finalize marks'}`, 'error');
-      }
     } catch (error) {
       console.error('[DEBUG] Error finalizing marks:', error);
       const errorMsg = error.response?.data?.message || error.message;

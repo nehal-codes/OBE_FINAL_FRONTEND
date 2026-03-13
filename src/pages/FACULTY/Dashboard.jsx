@@ -178,10 +178,15 @@ const FacultyDashboard = () => {
     setFilters({ year: null, semester: null });
   };
 
-  const handleNavigateToAssessmentsDashboard = (courseId) => {
-    navigate(`/faculty/courses/${courseId}/assessments`);
-  };
+const handleNavigateToAssessmentsDashboard = (courseId, courseYear, courseSemester) => {
 
+  navigate(`/faculty/courses/${courseId}/assessments`, {
+    state: { 
+      year: courseYear,
+      semester: courseSemester 
+    }
+  });
+};
   const stats = calculateStats();
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -273,21 +278,26 @@ const FacultyDashboard = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              // Navigate to the first assigned course's assessments dashboard if available
-              if (assignments.length > 0) {
-                handleNavigateToAssessmentsDashboard(assignments[0].courseId);
-              } else {
-                navigate('/faculty/courses');
-              }
-            }}
-            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2 shadow-sm"
-          >
-            <ClipboardCheck className="h-5 w-5" />
-            Go to Assessments Dashboard
-            <ChevronRight className="h-5 w-5" />
-          </button>
+         <button
+  onClick={() => {
+    if (assignments.length > 0) {
+      const firstAssignment = assignments[0];
+      handleNavigateToAssessmentsDashboard(
+        firstAssignment.courseId,
+        firstAssignment.year,
+        firstAssignment.semester
+      );
+    } else {
+      navigate('/faculty/courses');
+    }
+  }}
+  className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center gap-2 shadow-sm"
+>
+  <ClipboardCheck className="h-5 w-5" />
+  Go to Assessments Dashboard
+  <ChevronRight className="h-5 w-5" />
+</button>
+
         </div>
         {assignments.length > 0 && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -295,7 +305,11 @@ const FacultyDashboard = () => {
               <div 
                 key={index}
                 className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
-                onClick={() => handleNavigateToAssessmentsDashboard(assignment.courseId)}
+             onClick={() => handleNavigateToAssessmentsDashboard(
+      assignment.courseId,
+      assignment.year,
+      assignment.semester
+    )}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-mono text-sm font-semibold text-blue-700">
@@ -674,36 +688,6 @@ const FacultyDashboard = () => {
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 text-blue-600 mr-3" />
                     <span>View All Assignments</span>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </button>
-                <button
-                  onClick={() => navigate('/faculty/courses')}
-                  className="w-full flex items-center justify-between p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center">
-                    <BookOpen className="h-5 w-5 text-green-600 mr-3" />
-                    <span>Browse Courses</span>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </button>
-                <button
-                  onClick={() => navigate('/faculty/clos')}
-                  className="w-full flex items-center justify-between p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center">
-                    <Award className="h-5 w-5 text-purple-600 mr-3" />
-                    <span>Manage CLOs</span>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </button>
-                <button
-                  onClick={() => navigate('/faculty/profile')}
-                  className="w-full flex items-center justify-between p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 text-orange-600 mr-3" />
-                    <span>Update Profile</span>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </button>

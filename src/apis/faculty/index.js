@@ -23,6 +23,10 @@ export const facultyApi = {
   
   // Get department info
   getDepartmentInfo: () => axios.get('/faculty/department'),
+   
+  submitReportToHOD: (reportData) => axios.post('/faculty/reports/submit-to-hod', reportData),
+ checkReportSubmission: (params) => axios.get('/faculty/reports/check-submission', { params }),
+  
 };
 
 export default facultyApi;

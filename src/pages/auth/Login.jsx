@@ -21,7 +21,14 @@ const Login = () => {
 
     try {
       await login(credentials);
-      navigate("/dashboard");
+      console.log("Login successful");
+      if(JSON.parse(localStorage.getItem("user")).role === "HOD") {
+        navigate("/dashboard");
+      } else if(JSON.parse(localStorage.getItem("user")).role === "FACULTY") {
+        navigate("/faculty/dashboard");
+      } else {
+        setError("Unknown user role. Please contact support.");
+      }
     } catch (err) {
       setError(
         err.response?.data?.error ||
