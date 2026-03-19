@@ -250,45 +250,46 @@ const UploadPanel = ({ course, closData, semester, year, onUploaded, facultyApi 
 
   const canSubmit = file && rollNoCol && Object.keys(cloColumnMap).length > 0 && Object.values(cloColumnMap).every(v => v);
 
-  const handleImport = async () => {
-    if (!canSubmit) return;
-    setUploading(true); setError('');
-    try {
-      const cleanedRows = parsedRows
-        .filter(row => row[rollNoCol]?.toString().trim().length > 0)
-        .map(row => {
-          const out = { ...row };
-          Object.entries(cloColumnMap).forEach(([, col]) => {
-            if (col && col !== 'skip') {
-              const raw = row[col]?.toString().trim() || '';
-              if (raw.toLowerCase().includes('option')) {
-                const m = raw.match(/option\s*(\d)/i);
-                if (m) out[col] = m[1];
-              } else if (raw === '0') out[col] = '';
-            }
-          });
-          return out;
-        })
-        .filter(row => Object.entries(cloColumnMap).every(([, col]) => {
-          if (!col || col === 'skip') return true;
-          const n = parseInt(row[col]);
-          return !isNaN(n) && n >= 1 && n <= 5;
-        }));
+const handleImport = async () => {
+  if (!canSubmit) return;
+  setUploading(true); setError('');
+  try {
+    const activeCloEntries = Object.entries(cloColumnMap).filter(([, col]) => col && col !== 'skip');
 
-      if (!cleanedRows.length) { setError('No valid rows found after cleaning.'); setUploading(false); return; }
-
-      await facultyApi.importIndirectAssessments(course.id, {
-        year: year || course.year,
-        semester: semester || course.semester,
-        mappings: { rollNoColumn: rollNoCol, cloColumns: cloColumnMap },
-        data: cleanedRows
+    const cleanedRows = parsedRows
+      .filter(row => row[rollNoCol]?.toString().trim().length > 0)
+      .map(row => {
+        const out = { ...row };
+        activeCloEntries.forEach(([, col]) => {
+          const raw = out[col]?.toString().trim() || '';
+          // Only normalize "Option N" style — touch nothing else
+          if (raw.toLowerCase().includes('option')) {
+            const m = raw.match(/option\s*(\d)/i);
+            out[col] = m ? m[1] : raw;
+          }
+        });
+        return out;
       });
-      await onUploaded();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Import failed. Check column mappings.');
-    } finally { setUploading(false); }
-  };
 
+    if (!cleanedRows.length) {
+      setError('No valid rows found after cleaning.');
+      setUploading(false);
+      return;
+    }
+
+    await facultyApi.importIndirectAssessments(course.id, {
+      year: year || course.year,
+      semester: semester || course.semester,
+      mappings: { rollNoColumn: rollNoCol, cloColumns: cloColumnMap },
+      data: cleanedRows
+    });
+    await onUploaded();
+  } catch (err) {
+    setError(err.response?.data?.message || 'Import failed. Check column mappings.');
+  } finally {
+    setUploading(false);
+  }
+};
   return (
     <div className="iap-upload-panel">
       {!file ? (
