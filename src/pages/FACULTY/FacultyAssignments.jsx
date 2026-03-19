@@ -58,10 +58,7 @@ const FacultyAssignments = () => {
             <h1 className="text-3xl font-bold text-gray-900">My Course Assignments</h1>
             <p className="text-gray-600 mt-2">View all your course assignments across semesters</p>
           </div>
-          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </button>
+       
         </div>
       </div>
 

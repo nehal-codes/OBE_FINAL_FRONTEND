@@ -20,23 +20,14 @@ const Login = () => {
     setError("");
 
     try {
-      const data = await login(credentials);
-
-      const user = data?.user || {};
-      const roleRaw =
-        (user.role && String(user.role)) ||
-        user.roleName ||
-        user.userType ||
-        user.designation ||
-        "";
-      const role = String(roleRaw).toUpperCase();
-
-      if (role === "HOD") {
-        navigate("/", { replace: true });
-      } else if (role === "FACULTY") {
-        navigate("/faculty", { replace: true });
+      await login(credentials);
+      console.log("Login successful");
+      if(JSON.parse(localStorage.getItem("user")).role === "HOD") {
+        navigate("/dashboard");
+      } else if(JSON.parse(localStorage.getItem("user")).role === "FACULTY") {
+        navigate("/faculty/dashboard");
       } else {
-        navigate("/", { replace: true });
+        setError("Unknown user role. Please contact support.");
       }
     } catch (err) {
       setError(
