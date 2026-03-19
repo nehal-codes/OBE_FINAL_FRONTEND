@@ -364,7 +364,7 @@ const handleNavigateToAssessmentsDashboard = (courseId, courseYear, courseSemest
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
             <div className="p-3 bg-purple-100 rounded-lg">
               <Calendar className="h-6 w-6 text-purple-600" />
@@ -379,7 +379,7 @@ const handleNavigateToAssessmentsDashboard = (courseId, courseYear, courseSemest
               </p>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">

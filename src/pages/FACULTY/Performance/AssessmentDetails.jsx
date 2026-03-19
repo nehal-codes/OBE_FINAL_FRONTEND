@@ -101,8 +101,6 @@ const AllAssessmentsDetails = ({ performanceData }) => (
           </div>
           <div className="assessment-card-stats">
             <div className="stat-row"><span className="stat-label">Max Marks:</span><span className="stat-value">{stat.assessment.maxMarks}</span></div>
-            <div className="stat-row"><span className="stat-label">Class Average:</span><span className="stat-value highlight">{stat.classAverage.toFixed(1)}%</span></div>
-            <div className="stat-row"><span className="stat-label">Students:</span><span className="stat-value">{stat.totalStudents}</span></div>
             <div className="stat-row"><span className="stat-label">CLOs Covered:</span><span className="stat-value">{stat.clos.length}</span></div>
           </div>
           <div className="assessment-clos">

@@ -1489,10 +1489,6 @@
   animation: spin 1s linear infinite;
   margin-bottom: 20px;
 }
-/* ─────────────────────────────────────────────────────────────
-   PATCH — append to AssessmentDashboard.css
-   New classes added by the refactor
-───────────────────────────────────────────────────────────── */
 
 /* ── Modal ── */
 .modal-overlay {
@@ -1719,6 +1715,138 @@
 /* ── Spinning animation ── */
 .spinning {
   animation: spin 1s linear infinite;
+}
+/* Add these styles at the end of your AssessmentDashboard.css file */
+
+/* Faculty display in course header */
+.faculty-info {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--light-bg);
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+  font-size: 14px;
+}
+
+.faculty-info.shared-course {
+  border-left-color:  #4361ee;
+  background: #f5f3ff;
+}
+
+.faculty-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--gray-text);
+}
+
+.faculty-count {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-badge {
+  background: #4361ee;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.faculty-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 24px;
+}
+
+.faculty-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.faculty-item.coordinator {
+  background: #e3f2fd;
+  border-color: var(--primary-color);
+}
+
+.faculty-name {
+  font-weight: 500;
+  color: var(--dark-text);
+}
+
+.coordinator-badge {
+  background: var(--primary-color);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 9px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.faculty-info-empty,
+.faculty-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--light-bg);
+  border-radius: 6px;
+  color: var(--gray-text);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Faculty indicator in course list */
+.course-faculty-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  font-size: 10px;
+  color: var(--gray-text);
+}
+
+.course-item.shared-course .course-faculty-indicator {
+  background: rgba(139, 92, 246, 0.15);
+  color: #2e28d9;
+}
+
+.shared-indicator {
+  width: 16px;
+  height: 16px;
+  background:  #5f78e9;
+  color: white;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
 }
 
 @keyframes spin {

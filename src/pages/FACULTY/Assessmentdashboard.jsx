@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { BookOpen, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
+import { BookOpen, AlertTriangle, RefreshCw, ArrowLeft, Users, Calendar, UserCheck } from "lucide-react";
 import facultyApi from "../../apis/faculty";
 import assessmentApi from "../../apis/assessments/assessment";
+import HODAPI from '../../apis/HOD';
 import AssessmentModal from "./AssessmentModal";
-import MarksEntry from "./MarksEntry";
+// import MarksEntry from "./MarksEntry";
+import MarksEntry from "./MarksEntry/index";
 import StudentPerformanceAnalysis from "./StudentPerformanceAnalysis";
 import MarksDownloadWizard from "./MarksDownloadWizard";
 
@@ -12,7 +14,6 @@ import MarksDownloadWizard from "./MarksDownloadWizard";
 import AcademicPeriodSelector from "./assessmentscomponents/AcademicperiodSelector";
 import OverviewTab from "./assessmentscomponents/OverviewTab";
 import AssessmentsTab from "./assessmentscomponents/AssessmentsTab";
-
 
 import "./AssessmentDashboard.css";
 
@@ -40,6 +41,10 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
   const [showDownloadWizard, setShowDownloadWizard] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [analysisAssessmentId, setAnalysisAssessmentId] = useState(null);
+  
+  // New state for faculty information
+  const [courseFacultyMap, setCourseFacultyMap] = useState({});
+  const [loadingFaculties, setLoadingFaculties] = useState({});
 
   // Utility functions
   const safeArray = (arr) => (Array.isArray(arr) ? arr : []);
@@ -49,6 +54,55 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     Array.isArray(arr) ? arr.filter(callback) : [];
   const safeMap = (arr, callback) =>
     Array.isArray(arr) ? arr.map(callback) : [];
+
+  // Load faculty for a specific course
+  const loadCourseFaculty = useCallback(async (courseId, semester, year) => {
+    if (!courseId || !semester || !year) return;
+
+    setLoadingFaculties(prev => ({ ...prev, [courseId]: true }));
+
+    try {
+      const response = await HODAPI.assignments.getCourseAssignments(
+        courseId,
+        String(semester),
+        String(year)
+      );
+
+      let assignmentsData = [];
+      if (Array.isArray(response.data)) {
+        assignmentsData = response.data;
+      } else if (response.data?.assignments && Array.isArray(response.data.assignments)) {
+        assignmentsData = response.data.assignments;
+      } else if (response.data?.data?.assignments && Array.isArray(response.data.data.assignments)) {
+        assignmentsData = response.data.data.assignments;
+      }
+
+      const faculties = assignmentsData.map(f => ({
+        id: f.facultyId,
+        name: f.faculty?.name || f.facultyName || 'Unknown',
+        email: f.faculty?.user?.email || '',
+        isCoordinator: f.isCourseCoordinator || false
+      }));
+
+      setCourseFacultyMap(prev => ({ ...prev, [courseId]: faculties }));
+    } catch (error) {
+      if (error.response?.status === 404) {
+        setCourseFacultyMap(prev => ({ ...prev, [courseId]: [] }));
+      } else {
+        console.error(`Error loading faculty for course ${courseId}:`, error);
+      }
+    } finally {
+      setLoadingFaculties(prev => ({ ...prev, [courseId]: false }));
+    }
+  }, []);
+
+  // Load faculty for all courses
+  const loadAllCourseFaculty = useCallback(async (coursesList, semester, year) => {
+    const promises = coursesList.map(course => 
+      loadCourseFaculty(course.id, semester, year)
+    );
+    await Promise.all(promises);
+  }, [loadCourseFaculty]);
 
   // Load faculty courses
   const loadFacultyCourses = useCallback(async (year = selectedYear, semester = selectedSemester) => {
@@ -88,6 +142,9 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
 
       setCourses(uniqueCourses);
 
+      // Load faculty information for all courses
+      await loadAllCourseFaculty(uniqueCourses, semester, year);
+
       if (uniqueCourses.length > 0 && !currentCourse) {
         setCurrentCourse(uniqueCourses[0]);
       } else if (currentCourse && uniqueCourses.length > 0) {
@@ -109,7 +166,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentCourse, selectedYear, selectedSemester]);
+  }, [currentCourse, selectedYear, selectedSemester, loadAllCourseFaculty]);
 
   // Load course assessments
   const loadCourseAssessments = useCallback(async (courseId) => {
@@ -218,6 +275,61 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
   };
 
   const stats = calculateStats();
+
+  // Get faculty display for current course
+  const getCurrentCourseFacultyDisplay = () => {
+    if (!currentCourse) return null;
+    
+    const faculties = courseFacultyMap[currentCourse.id] || [];
+    
+    if (loadingFaculties[currentCourse.id]) {
+      return (
+        <div className="faculty-loading">
+          <div className="spinner-small"></div>
+          <span>Loading faculty...</span>
+        </div>
+      );
+    }
+
+    if (faculties.length === 0) {
+      return (
+        <div className="faculty-info-empty">
+          <Users size={14} />
+          <span>No faculty assigned</span>
+        </div>
+      );
+    }
+
+    const isShared = faculties.length > 1;
+    const coordinator = faculties.find(f => f.isCoordinator);
+    const otherFaculties = faculties.filter(f => !f.isCoordinator);
+
+    return (
+      <div className={`faculty-info ${isShared ? 'shared-course' : ''}`}>
+        <div className="faculty-header">
+          <Users size={16} className="faculty-icon" />
+          <span className="faculty-count">
+            {faculties.length} {faculties.length === 1 ? 'Faculty' : 'Faculties'}
+            {isShared && <span className="shared-badge">Shared Course</span>}
+          </span>
+        </div>
+        <div className="faculty-list">
+          {coordinator && (
+            <div className="faculty-item coordinator" title={coordinator.email}>
+              <UserCheck size={14} className="coordinator-icon" />
+              <span className="faculty-name">{coordinator.name}</span>
+              <span className="coordinator-badge">Coordinator</span>
+            </div>
+          )}
+          {otherFaculties.map(f => (
+            <div key={f.id} className="faculty-item" title={f.email}>
+              <span className="faculty-name">{f.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // CRUD Operations
   const handleCreateAssessment = async (assessmentData) => {
@@ -441,14 +553,6 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
             isRefreshing={isRefreshing}
           />
         </div>
-        
-        <div className="faculty-info">
-          <div>
-            <div className="faculty-name">Faculty Dashboard</div>
-            <div className="faculty-dept">Assessment Management</div>
-          </div>
-          <div className="faculty-avatar">FD</div>
-        </div>
       </div>
 
       <div className="dashboard-content">
@@ -470,22 +574,33 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                 <p className="hint-text">Try changing the year or semester</p>
               </div>
             ) : (
-              safeMap(courses, (course) => (
-                <li
-                  key={course.id}
-                  className={`course-item ${currentCourse?.id === course.id ? "active" : ""}`}
-                  onClick={() => setCurrentCourse(course)}
-                >
-                  <div className="course-code">{course.code}</div>
-                  <div className="course-name">{course.name}</div>
-                  <div className="course-meta">
-                    <span>Credits: {course.credits}</span>
-                  </div>
-                  <div className="course-period">
-                    Y{course.year} - S{course.semester}
-                  </div>
-                </li>
-              ))
+              safeMap(courses, (course) => {
+                const faculties = courseFacultyMap[course.id] || [];
+                const isShared = faculties.length > 1;
+                return (
+                  <li
+                    key={course.id}
+                    className={`course-item ${currentCourse?.id === course.id ? "active" : ""} ${isShared ? 'shared-course' : ''}`}
+                    onClick={() => setCurrentCourse(course)}
+                  >
+                    <div className="course-code">{course.code}</div>
+                    <div className="course-name">{course.name}</div>
+                    <div className="course-meta">
+                      <span>Credits: {course.credits}</span>
+                    </div>
+                    <div className="course-period">
+                      Y{course.year} - S{course.semester}
+                    </div>
+                    {faculties.length > 0 && (
+                      <div className="course-faculty-indicator" title={`${faculties.length} faculty assigned${isShared ? ' (shared course)' : ''}`}>
+                        <Users size={12} />
+                        <span>{faculties.length}</span>
+                        {isShared && <span className="shared-indicator">S</span>}
+                      </div>
+                    )}
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>
@@ -508,9 +623,12 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                       Academic Period: {currentCourse.year} - Semester {currentCourse.semester}
                     </span>
                   </div>
-                </div>
-                <div className="course-stats">
                   
+                  {/* Faculty Information */}
+                  {getCurrentCourseFacultyDisplay()}
+                </div>
+                
+                <div className="course-stats">
                   <div className="stat-box">
                     <div className="stat-value">{courseClos.length}</div>
                     <div className="stat-label">CLOs</div>
@@ -555,6 +673,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                     stats={stats}
                     assessments={assessments}
                     onAnalyzeAll={() => handleOpenFullAnalysis(null)}
+                    facultyInfo={courseFacultyMap[currentCourse.id]}
                   />
                 )}
 
@@ -578,6 +697,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                     }}
                     onAnalyzeAssessment={(assessmentId) => handleOpenFullAnalysis(assessmentId)}
                     onOpenDownloadWizard={() => setShowDownloadWizard(true)}
+                    facultyInfo={courseFacultyMap[currentCourse.id]}
                   />
                 )}
 
@@ -588,6 +708,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                     course={currentCourse}
                     onSelectAssessment={setSelectedAssessment}
                     onEnterMarks={handleEnterMarks}
+                    facultyInfo={courseFacultyMap[currentCourse.id]}
                   />
                 )}
               </div>
@@ -617,6 +738,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
             <MarksDownloadWizard
               course={currentCourse}
               onClose={() => setShowDownloadWizard(false)}
+              assignedFaculties={courseFacultyMap[currentCourse.id] || []}
             />
           </div>
         </div>
@@ -634,7 +756,8 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
           }}
           onSubmit={editingAssessment ? handleUpdateAssessment : handleCreateAssessment}
           onMapClos={handleMapClos}
-          existingAssessments={assessments} 
+          existingAssessments={assessments}
+          facultyInfo={courseFacultyMap[currentCourse.id]}
         />
       )}
     </div>

@@ -14,12 +14,11 @@ const PerformanceHeader = ({
   onExportCSV,
   onExportPDF,
   onClose,
-  isReportSubmitted = false // New prop to track submission status
+  isReportSubmitted = false,
+  hasIndirectData = false,
 }) => {
-  
-  // Determine if submit button should be disabled
   const isSubmitDisabled = submitting || isReportSubmitted;
-  
+
   return (
     <div className="analysis-header">
       <div className="header-title">
@@ -29,9 +28,23 @@ const PerformanceHeader = ({
             ? <>CLO-wise Analysis: All Assessments ({performanceData?.assessments?.length || 0})</>
             : <>CLO-wise Analysis: {performanceData?.assessment?.title}</>}
         </h2>
-        {isAllMode
-          ? <span className="finalized-badge multi-assessment"><Layers size={16} /> Combined Analysis</span>
-          : <span className="finalized-badge"><CheckCircle size={16} /> Finalized Assessment</span>}
+
+        {isAllMode ? (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span className="finalized-badge multi-assessment">
+              <Layers size={16} /> Combined Analysis
+            </span>
+            {hasIndirectData && (
+              <span className="finalized-badge indirect-badge">
+                <CheckCircle size={14} /> + Indirect
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="finalized-badge">
+            <CheckCircle size={16} /> Finalized Assessment
+          </span>
+        )}
       </div>
 
       <div className="header-actions">
@@ -58,19 +71,11 @@ const PerformanceHeader = ({
             className={`btn-submit-hod ${isReportSubmitted ? 'btn-submitted' : ''}`}
             onClick={onSubmitToHOD}
             disabled={isSubmitDisabled}
-            title={
-              isReportSubmitted 
-                ? 'Report already submitted to HOD' 
-                : 'Submit combined report to HOD'
-            }
+            title={isReportSubmitted ? 'Report already submitted to HOD' : 'Submit combined report to HOD'}
           >
             <Send size={16} />
             <span>
-              {submitting 
-                ? 'Submitting…' 
-                : isReportSubmitted 
-                  ? 'Already Submitted' 
-                  : 'Submit to HOD'}
+              {submitting ? 'Submitting…' : isReportSubmitted ? 'Already Submitted' : 'Submit to HOD'}
             </span>
             {isReportSubmitted && <CheckCircle size={16} className="submitted-check" />}
           </button>

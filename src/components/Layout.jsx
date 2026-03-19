@@ -15,14 +15,37 @@ import {
   FiChevronRight,
   FiHome,
   FiX,
+  FiList,
+  FiAward,
 } from "react-icons/fi";
 
 const menuItems = [
+  
+  // FACULTY Routes
+  {
+    text: "Faculty Dashboard",
+    icon: <FiGrid />,
+    path: "/faculty/dashboard",
+    roles: ["FACULTY"],
+  },
+  {
+    text: "My Assignments",
+    icon: <FiList />,
+    path: "/faculty/assignments",
+    roles: ["FACULTY"],
+  },
+  {
+    text: "Assessment Dashboard",
+    icon: <FiAward />,
+    path: "/faculty/courses/:courseId/assessments",
+    roles: ["FACULTY"],
+  },
+ 
   {
     text: "Dashboard",
     icon: <FiGrid />,
     path: "/dashboard",
-    roles: ["HOD", "FACULTY", "ADMIN"],
+    roles: ["HOD", "ADMIN"],
   },
   {
     text: "Course Management",
@@ -52,13 +75,13 @@ const menuItems = [
     text: "Reports",
     icon: <FiBarChart2 />,
     path: "/reports",
-    roles: ["HOD", "FACULTY", "ADMIN"],
+    roles: ["HOD",  "ADMIN"],
   },
   {
     text: "Settings",
     icon: <FiSettings />,
     path: "/settings",
-    roles: ["HOD", "FACULTY", "ADMIN"],
+    roles: ["HOD", "ADMIN"],
   },
 ];
 

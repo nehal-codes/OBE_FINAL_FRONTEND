@@ -502,6 +502,188 @@ src/components/faculty/StudentPerformanceAnalysis.css
   color: #925d00;
   border: 1px solid #ffe08c;
 }
+/* ── Add these to StudentPerformanceAnalysis.css ──────────────────────────── */
+
+/* Course-level Final Attainment Card */
+.course-final-attainment-card {
+  margin: 20px 0 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cfa-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.cfa-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.cfa-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Calculation row */
+.cfa-calculation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cfa-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-width: 130px;
+  gap: 2px;
+}
+.cfa-block-label {
+  font-size: 10px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+.cfa-block-pct {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.1;
+}
+.cfa-block-weight {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+.cfa-block-result {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.cfa-plus,
+.cfa-equals {
+  font-size: 22px;
+  font-weight: 300;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.cfa-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 12px 20px;
+  min-width: 150px;
+  gap: 2px;
+}
+.cfa-final-pct {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+}
+.cfa-final-level {
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.cfa-formula-note {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 4px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+}
+
+/* Gauge */
+.cfa-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cfa-gauge-track {
+  position: relative;
+  height: 12px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: visible;
+}
+.cfa-gauge-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+.cfa-gauge-marker {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #cbd5e1;
+  border-radius: 1px;
+}
+.cfa-gauge-marker-label {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.cfa-gauge-zones {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0 0 2px;
+  margin-top: 16px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* level-na badge */
+.level-na {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
+/* indirect-badge in header */
+.indirect-badge {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+/* final-level emphasis */
+.final-level { font-weight: 700; }
+.final-pct { font-size: 11px; font-weight: 400; opacity: 0.75; }
+
+/* attainment-formula-note (kept for backward compat) */
+.attainment-formula-note {
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #854d0e;
+  margin-bottom: 16px;
+}
+
 
 .level-badge.level-1 {
   background: #fff0e0;
@@ -2891,6 +3073,193 @@ src/components/faculty/StudentPerformanceAnalysis.css
   gap: 12px;
   flex-wrap: wrap;
 }
+/* ── Add these to StudentPerformanceAnalysis.css ──────────────────────────── */
+
+/* Course-level Final Attainment Card */
+.course-final-attainment-card {
+  margin: 20px 0 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cfa-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.cfa-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.cfa-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Calculation row */
+.cfa-calculation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cfa-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-width: 130px;
+  gap: 2px;
+}
+.cfa-block-label {
+  font-size: 10px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+.cfa-block-pct {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.1;
+}
+.cfa-block-weight {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+.cfa-block-result {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.cfa-plus,
+.cfa-equals {
+  font-size: 22px;
+  font-weight: 300;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.cfa-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 12px 20px;
+  min-width: 150px;
+  gap: 2px;
+}
+.cfa-final-pct {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+}
+.cfa-final-level {
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.cfa-formula-note {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 4px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+}
+
+/* Gauge */
+.cfa-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cfa-gauge-track {
+  position: relative;
+  height: 12px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: visible;
+}
+.cfa-gauge-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+.cfa-gauge-marker {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #cbd5e1;
+  border-radius: 1px;
+}
+.cfa-gauge-marker-label {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.cfa-gauge-zones {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0 0 2px;
+  margin-top: 16px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* level-na badge */
+.level-na {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
+/* indirect-badge in header */
+.indirect-badge {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+/* final-level emphasis */
+.final-level { font-weight: 700; }
+.final-pct { font-size: 11px; font-weight: 400; opacity: 0.75; }
+
+/* attainment-formula-note (kept for backward compat) */
+.attainment-formula-note {
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #854d0e;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .cfa-calculation { flex-direction: column; align-items: flex-start; }
+  .cfa-plus, .cfa-equals { align-self: center; }
+  .cfa-final { align-self: stretch; }
+}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
@@ -2943,7 +3312,11 @@ src/components/faculty/StudentPerformanceAnalysis.css
     padding: 0.75rem 0.5rem;
   }
 }
-
+@media (max-width: 768px) {
+  .cfa-calculation { flex-direction: column; align-items: flex-start; }
+  .cfa-plus, .cfa-equals { align-self: center; }
+  .cfa-final { align-self: stretch; }
+}
 @media (max-width: 480px) {
   .quartile-distribution {
     grid-template-columns: 1fr;
