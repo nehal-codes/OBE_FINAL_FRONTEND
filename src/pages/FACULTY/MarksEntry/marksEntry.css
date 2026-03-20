@@ -308,50 +308,7 @@
   border-radius: 50%;
   animation: me-spin 0.8s linear infinite;
 }
-/* Add to your MarksEntry.css */
 
-/* Realtime validation styles */
-.me-marks-input--valid {
-  border-color: #10b981;
-  background-color: #f0fdf4;
-}
-
-.me-marks-input--invalid {
-  border-color: #ef4444;
-  background-color: #fef2f2;
-}
-
-.me-input-error {
-  font-size: 10px;
-  color: #ef4444;
-  margin-top: 2px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.me-td--error {
-  position: relative;
-}
-
-.me-marks-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
-}
-
-.me-marks-input--invalid:focus {
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-}
-
-.me-marks-input--valid:focus {
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-}
-
-/* Placeholder styling */
-.me-marks-input::placeholder {
-  color: #9ca3af;
-  font-size: 10px;
-}
 /* ── Responsive ────────────────────────────────────────────────────────────────  */
 @media (max-width: 768px) {
   .marks-header { flex-direction: column; align-items: stretch; }
