@@ -16,6 +16,12 @@ import CourseDetails from "../pages/FACULTY/CourseDetails";
 import FacultyDashboard from "../pages/FACULTY/Dashboard";
 import FacultyAssignments from "../pages/FACULTY/FacultyAssignments";
 import AssessmentDashboard from "../pages/FACULTY/Assessmentdashboard";
+import AdminDashboard from "../pages/ADMIN/Dashboard";
+import ProgramsByLevel from "../pages/ADMIN/ProgramsByLevel";
+import DepartmentsByProgram from "../pages/ADMIN/DepartmentsByProgram";
+import CoursesByDepartment from "../pages/ADMIN/CoursesByDepartment";
+import AdminCourseDetails from "../pages/ADMIN/CourseDetails";
+import UserManagement from "../pages/ADMIN/UserManagement";
 
 export const AppRoutes = () => {
   console.log("Routes loaded");
@@ -168,6 +174,29 @@ export const AppRoutes = () => {
           }
         />
       </Route>
+
+      {/* ADMIN ROUTES */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="programs/:level" element={<ProgramsByLevel />} />
+          <Route path="program/:programId/departments" element={<DepartmentsByProgram />} />
+          <Route path="department/:departmentId/courses" element={<CoursesByDepartment />} />
+          <Route path="course/:courseId" element={<AdminCourseDetails />} />
+          <Route path="users" element={<UserManagement />} />
+          
+          {/* You can add these later */}
+          <Route path="program/:programId" element={<div>Program Details Page</div>} />
+          <Route path="department/:departmentId" element={<div>Department Details Page</div>} />
+          <Route path="course/:courseId" element={<div>Course Details Page</div>} />
+        </Route>
 
       {/* UNAUTHORIZED PAGE */}
       <Route

@@ -15,6 +15,22 @@ import {
   FiChevronRight,
   FiHome,
   FiX,
+  FiBookOpen, 
+  FiUsers,   
+  FiUserPlus, 
+} from "react-icons/fi";
+
+const menuItems = [
+  // DASHBOARD - Now role-specific
+  {
+    text: "Dashboard",
+    icon: <FiGrid />,
+    path: {  // Make path dynamic based on role
+      ADMIN: "/admin/dashboard",
+      HOD: "/dashboard",
+      FACULTY: "/faculty/dashboard"
+    },
+    roles: ["HOD", "FACULTY", "ADMIN"],
   FiList,
   FiAward,
 } from "react-icons/fi";
@@ -53,6 +69,32 @@ const menuItems = [
     path: "/hod/courses",
     roles: ["HOD", "ADMIN"],
   },
+  // ADMIN SPECIFIC MENU ITEMS
+  {
+    text: "Programs",
+    icon: <FiBookOpen />,
+    path: "/admin",
+    roles: ["ADMIN"],
+  },
+  {
+    text: "User Management",
+    icon: <FiUsers />,
+    path: "/admin/users",
+    roles: ["ADMIN"],
+  },
+  {
+    text: "Faculty Management",
+    icon: <FiUsers />,
+    path: "/admin/faculty",
+    roles: ["ADMIN"],
+  },
+  {
+    text: "Student Management",
+    icon: <FiUserPlus />,
+    path: "/admin/students",
+    roles: ["ADMIN"],
+  },
+  // HOD SPECIFIC MENU ITEMS
   {
     text: "Faculty Assignment",
     icon: <FiClipboard />,
@@ -71,6 +113,7 @@ const menuItems = [
     path: "/question-bank",
     roles: ["HOD"],
   },
+  // COMMON MENU ITEMS
   {
     text: "Reports",
     icon: <FiBarChart2 />,
@@ -86,7 +129,7 @@ const menuItems = [
 ];
 
 const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Start with sidebar open
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("");
 
@@ -94,14 +137,42 @@ const Layout = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const filteredMenu = menuItems.filter((item) =>
-    item.roles.includes(user?.role)
-  );
+  // Helper function to get the correct path for an item based on user role
+  const getItemPath = (item) => {
+    if (typeof item.path === 'string') {
+      return item.path;
+    }
+    // If path is an object with role-specific paths
+    if (item.path && user?.role && item.path[user.role]) {
+      return item.path[user.role];
+    }
+    // Fallback to first available path or root
+    return item.path?.[Object.keys(item.path)[0]] || '/';
+  };
+
+  // Debug: Log user role and filtered menu items
+  console.log('Layout - User:', user);
+  console.log('Layout - User Role:', user?.role);
+  
+  const filteredMenu = menuItems.filter((item) => {
+    const hasAccess = item.roles.includes(user?.role);
+    console.log(`Menu Item: ${item.text}, Role: ${user?.role}, Has Access: ${hasAccess}`);
+    return hasAccess;
+  });
+  
+  console.log('Filtered Menu Items:', filteredMenu.map(item => ({ 
+    text: item.text, 
+    path: getItemPath(item) 
+  })));
 
   useEffect(() => {
-    const currentItem = menuItems.find(item => location.pathname.startsWith(item.path));
+    // Find active item based on current path
+    const currentItem = menuItems.find(item => {
+      const itemPath = getItemPath(item);
+      return location.pathname.startsWith(itemPath);
+    });
     setActiveItem(currentItem?.text || "");
-  }, [location.pathname]);
+  }, [location.pathname, user]);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -123,6 +194,17 @@ const Layout = () => {
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  // Redirect to role-appropriate dashboard on root path
+  useEffect(() => {
+    if (location.pathname === '/' && user?.role) {
+      const dashboardPath = 
+        user.role === 'ADMIN' ? '/admin/dashboard' :
+        user.role === 'FACULTY' ? '/faculty/dashboard' :
+        '/dashboard'; // HOD default
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [location.pathname, user, navigate]);
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100/50">
@@ -179,8 +261,8 @@ const Layout = () => {
                 <FiUser className="text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role?.toLowerCase()}</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 capitalize">{user?.role?.toLowerCase() || 'Loading...'}</p>
               </div>
             </div>
           </div>
@@ -193,13 +275,23 @@ const Layout = () => {
               Navigation
             </p>
           )}
+          
+          {/* Show message if no menu items */}
+          {filteredMenu.length === 0 && sidebarOpen && (
+            <div className="px-4 py-3 text-sm text-gray-500 bg-gray-50 rounded-lg">
+              No menu items available for your role
+            </div>
+          )}
+
           {filteredMenu.map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path);
+            const itemPath = getItemPath(item);
+            const isActive = location.pathname === itemPath || location.pathname.startsWith(itemPath);
+            
             return (
               <button
                 key={item.text}
                 onClick={() => {
-                  navigate(item.path);
+                  navigate(itemPath);
                   if (window.innerWidth < 768) setSidebarOpen(false);
                 }}
                 className={`w-full flex items-center ${sidebarOpen ? 'justify-between' : 'justify-center'} 
@@ -231,7 +323,7 @@ const Layout = () => {
           <div className="p-4 border-t border-gray-200/50 bg-white/50">
             <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-lg">
               <p className="text-xs text-gray-600 text-center truncate">
-                {user?.department?.name || "Department"}
+                {user?.department?.name || user?.role || "Academic Portal"}
               </p>
             </div>
           </div>
@@ -276,8 +368,8 @@ const Layout = () => {
             {/* Right Section - User Menu */}
             <div className="flex items-center gap-4">
               <div className="hidden md:block text-sm text-gray-600">
-                <div className="font-medium text-gray-900">{user?.name}</div>
-                <div className="text-xs text-gray-500">{user?.role}</div>
+                <div className="font-medium text-gray-900">{user?.name || 'User'}</div>
+                <div className="text-xs text-gray-500">{user?.role || 'Loading...'}</div>
               </div>
               
               <div className="relative">
@@ -296,21 +388,36 @@ const Layout = () => {
                   menuOpen ? 'opacity-100 translate-y-0 visible' : 'opacity-0 -translate-y-2 invisible'
                 }`}>
                   <div className="p-4 border-b border-gray-100">
-                    <p className="font-semibold text-gray-900">{user?.name}</p>
-                    <p className="text-sm text-gray-500 mt-1">{user?.email}</p>
+                    <p className="font-semibold text-gray-900">{user?.name || 'User'}</p>
+                    <p className="text-sm text-gray-500 mt-1">{user?.email || 'No email'}</p>
                   </div>
                   <div className="p-2">
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => {
+                        navigate('/settings');
+                        setMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
                       <FiUser className="text-gray-500" />
                       Profile Settings
                     </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => {
+                        navigate('/settings');
+                        setMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
                       <FiSettings className="text-gray-500" />
                       Account Settings
                     </button>
                     <div className="border-t border-gray-100 my-2"></div>
                     <button
-                      onClick={handleLogout}
+                      onClick={() => {
+                        handleLogout();
+                        setMenuOpen(false);
+                      }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <FiLogOut />
