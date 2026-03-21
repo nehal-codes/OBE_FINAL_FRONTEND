@@ -31,6 +31,37 @@ const menuItems = [
       FACULTY: "/faculty/dashboard"
     },
     roles: ["HOD", "FACULTY", "ADMIN"],
+  FiList,
+  FiAward,
+} from "react-icons/fi";
+
+const menuItems = [
+  
+  // FACULTY Routes
+  {
+    text: "Faculty Dashboard",
+    icon: <FiGrid />,
+    path: "/faculty/dashboard",
+    roles: ["FACULTY"],
+  },
+  {
+    text: "My Assignments",
+    icon: <FiList />,
+    path: "/faculty/assignments",
+    roles: ["FACULTY"],
+  },
+  {
+    text: "Assessment Dashboard",
+    icon: <FiAward />,
+    path: "/faculty/courses/:courseId/assessments",
+    roles: ["FACULTY"],
+  },
+ 
+  {
+    text: "Dashboard",
+    icon: <FiGrid />,
+    path: "/dashboard",
+    roles: ["HOD", "ADMIN"],
   },
   {
     text: "Course Management",
@@ -86,14 +117,14 @@ const menuItems = [
   {
     text: "Reports",
     icon: <FiBarChart2 />,
-    path: "/hod/reports/program",
-    roles: ["HOD", "FACULTY", "ADMIN"],
+    path: "/reports",
+    roles: ["HOD",  "ADMIN"],
   },
   {
     text: "Settings",
     icon: <FiSettings />,
     path: "/settings",
-    roles: ["HOD", "FACULTY", "ADMIN"],
+    roles: ["HOD", "ADMIN"],
   },
 ];
 

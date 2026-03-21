@@ -1,28 +1,24 @@
-// src/components/faculty/AssessmentDashboard.jsx
 import React, { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
+import { BookOpen, AlertTriangle, RefreshCw, ArrowLeft, Users, Calendar, UserCheck } from "lucide-react";
 import facultyApi from "../../apis/faculty";
 import assessmentApi from "../../apis/assessments/assessment";
+import HODAPI from '../../apis/HOD';
 import AssessmentModal from "./AssessmentModal";
-import MarksEntry from "./MarksEntry";
+// import MarksEntry from "./MarksEntry";
+import MarksEntry from "./MarksEntry/index";
 import StudentPerformanceAnalysis from "./StudentPerformanceAnalysis";
-import {
-  BookOpen,
-  Award,
-  FileText,
-  Plus,
-  Edit,
-  Trash2,
-  AlertCircle,
-  AlertTriangle,
-  RefreshCw,
-  Calendar,
-  ChevronDown,
-  BarChart,
-  ArrowLeft
-} from "lucide-react";
+import MarksDownloadWizard from "./MarksDownloadWizard";
+
+// Import subcomponents
+import AcademicPeriodSelector from "./assessmentscomponents/AcademicperiodSelector";
+import OverviewTab from "./assessmentscomponents/OverviewTab";
+import AssessmentsTab from "./assessmentscomponents/AssessmentsTab";
+
 import "./AssessmentDashboard.css";
 
 const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
+  const location = useLocation();
   const [courses, setCourses] = useState([]);
   const [currentCourse, setCurrentCourse] = useState(null);
   const [assignments, setAssignments] = useState([]);
@@ -35,28 +31,22 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState(null);
   const [selectedAssessment, setSelectedAssessment] = useState(null);
-  const [selectedYear, setSelectedYear] = useState(initialYear);
-  const [selectedSemester, setSelectedSemester] = useState(initialSemester);
+  const [selectedYear, setSelectedYear] = useState(
+    location.state?.year || initialYear
+  );
+  const [selectedSemester, setSelectedSemester] = useState(
+    location.state?.semester || initialSemester
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // NEW: State for full-screen performance analysis
+  const [showDownloadWizard, setShowDownloadWizard] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [analysisAssessmentId, setAnalysisAssessmentId] = useState(null);
+  
+  // New state for faculty information
+  const [courseFacultyMap, setCourseFacultyMap] = useState({});
+  const [loadingFaculties, setLoadingFaculties] = useState({});
 
-  // Year and semester options
-  const yearOptions = Array.from({ length: 5 }, (_, i) => selectedYear - 2 + i);
-  const semesterOptions = [
-    { value: 1, label: "Semester 1" },
-    { value: 2, label: "Semester 2" },
-    { value: 3, label: "Semester 3" },
-    { value: 4, label: "Semester 4" },
-    { value: 5, label: "Semester 5" },
-    { value: 6, label: "Semester 6" },
-    { value: 7, label: "Semester 7" },
-    { value: 8, label: "Semester 8" },
-  ];
-
-  // Safe array functions
+  // Utility functions
   const safeArray = (arr) => (Array.isArray(arr) ? arr : []);
   const safeReduce = (arr, callback, initialValue) =>
     Array.isArray(arr) ? arr.reduce(callback, initialValue) : initialValue;
@@ -65,23 +55,67 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
   const safeMap = (arr, callback) =>
     Array.isArray(arr) ? arr.map(callback) : [];
 
+  // Load faculty for a specific course
+  const loadCourseFaculty = useCallback(async (courseId, semester, year) => {
+    if (!courseId || !semester || !year) return;
+
+    setLoadingFaculties(prev => ({ ...prev, [courseId]: true }));
+
+    try {
+      const response = await HODAPI.assignments.getCourseAssignments(
+        courseId,
+        String(semester),
+        String(year)
+      );
+
+      let assignmentsData = [];
+      if (Array.isArray(response.data)) {
+        assignmentsData = response.data;
+      } else if (response.data?.assignments && Array.isArray(response.data.assignments)) {
+        assignmentsData = response.data.assignments;
+      } else if (response.data?.data?.assignments && Array.isArray(response.data.data.assignments)) {
+        assignmentsData = response.data.data.assignments;
+      }
+
+      const faculties = assignmentsData.map(f => ({
+        id: f.facultyId,
+        name: f.faculty?.name || f.facultyName || 'Unknown',
+        email: f.faculty?.user?.email || '',
+        isCoordinator: f.isCourseCoordinator || false
+      }));
+
+      setCourseFacultyMap(prev => ({ ...prev, [courseId]: faculties }));
+    } catch (error) {
+      if (error.response?.status === 404) {
+        setCourseFacultyMap(prev => ({ ...prev, [courseId]: [] }));
+      } else {
+        console.error(`Error loading faculty for course ${courseId}:`, error);
+      }
+    } finally {
+      setLoadingFaculties(prev => ({ ...prev, [courseId]: false }));
+    }
+  }, []);
+
+  // Load faculty for all courses
+  const loadAllCourseFaculty = useCallback(async (coursesList, semester, year) => {
+    const promises = coursesList.map(course => 
+      loadCourseFaculty(course.id, semester, year)
+    );
+    await Promise.all(promises);
+  }, [loadCourseFaculty]);
+
   // Load faculty courses
   const loadFacultyCourses = useCallback(async (year = selectedYear, semester = selectedSemester) => {
     try {
       setLoading(true);
       setApiError(null);
-      console.log(`Loading faculty courses for Year: ${year}, Semester: ${semester}...`);
 
       const response = await facultyApi.getAllAssignments({
         year: year,
         semester: semester,
       });
 
-      console.log("Faculty API Response:", response);
-
-      const courseAssignments =
-        response.data?.assignments || response.data || [];
-
+      const courseAssignments = response.data?.assignments || response.data || [];
       setAssignments(courseAssignments);
 
       const uniqueCourses = safeReduce(
@@ -108,10 +142,12 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
 
       setCourses(uniqueCourses);
 
+      // Load faculty information for all courses
+      await loadAllCourseFaculty(uniqueCourses, semester, year);
+
       if (uniqueCourses.length > 0 && !currentCourse) {
         setCurrentCourse(uniqueCourses[0]);
       } else if (currentCourse && uniqueCourses.length > 0) {
-        // Try to keep the same course selected if it exists in new list
         const existingCourse = uniqueCourses.find(c => c.id === currentCourse.id);
         if (existingCourse) {
           setCurrentCourse({
@@ -130,29 +166,26 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentCourse, selectedYear, selectedSemester]);
+  }, [currentCourse, selectedYear, selectedSemester, loadAllCourseFaculty]);
 
   // Load course assessments
-  const loadCourseAssessments = useCallback(
-    async (courseId) => {
-      if (!courseId) return;
+  const loadCourseAssessments = useCallback(async (courseId) => {
+    if (!courseId) return;
 
-      try {
-        const response = await assessmentApi.getCourseAssessments(courseId, {
-          semester: selectedSemester,
-          year: selectedYear,
-        });
+    try {
+      const response = await assessmentApi.getCourseAssessments(courseId, {
+        semester: selectedSemester,
+        year: selectedYear,
+      });
 
-        const assessmentsData = response.data?.data?.assessments || [];
-        setAssessments(assessmentsData);
-        setMarksSummary(response.data?.data?.marksSummary);
-      } catch (error) {
-        console.error("Error loading assessments:", error);
-        setAssessments([]);
-      }
-    },
-    [selectedYear, selectedSemester]
-  );
+      const assessmentsData = response.data?.data?.assessments || [];
+      setAssessments(assessmentsData);
+      setMarksSummary(response.data?.data?.marksSummary);
+    } catch (error) {
+      console.error("Error loading assessments:", error);
+      setAssessments([]);
+    }
+  }, [selectedYear, selectedSemester]);
 
   // Load course CLOs
   const loadCourseClos = useCallback(async (courseId) => {
@@ -168,35 +201,28 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     }
   }, []);
 
-  // Load course students count
-  const loadCourseStudents = useCallback(
-    async (courseId) => {
-      if (!courseId) return;
+  // Load course students
+  const loadCourseStudents = useCallback(async (courseId) => {
+    if (!courseId) return;
 
-      try {
-        const response = await assessmentApi.getCourseStudents(courseId, {
-          semester: selectedSemester,
-          year: selectedYear,
-        });
+    try {
+      const response = await assessmentApi.getCourseStudents(courseId, {
+        semester: selectedSemester,
+        year: selectedYear,
+      });
 
-        const studentsData = response.data?.students || [];
-
-        setCourses((prev) =>
-          safeMap(prev, (course) =>
-            course.id === courseId
-              ? {
-                  ...course,
-                  students: studentsData.length || 0,
-                }
-              : course
-          )
-        );
-      } catch (error) {
-        console.error("Error loading students:", error);
-      }
-    },
-    [selectedYear, selectedSemester]
-  );
+      const studentsData = response.data?.students || [];
+      setCourses((prev) =>
+        safeMap(prev, (course) =>
+          course.id === courseId
+            ? { ...course, students: studentsData.length || 0 }
+            : course
+        )
+      );
+    } catch (error) {
+      console.error("Error loading students:", error);
+    }
+  }, [selectedYear, selectedSemester]);
 
   // Calculate marks remaining
   const calculateMarksRemaining = () => {
@@ -250,11 +276,64 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
 
   const stats = calculateStats();
 
-  // Create new assessment
+  // Get faculty display for current course
+  const getCurrentCourseFacultyDisplay = () => {
+    if (!currentCourse) return null;
+    
+    const faculties = courseFacultyMap[currentCourse.id] || [];
+    
+    if (loadingFaculties[currentCourse.id]) {
+      return (
+        <div className="faculty-loading">
+          <div className="spinner-small"></div>
+          <span>Loading faculty...</span>
+        </div>
+      );
+    }
+
+    if (faculties.length === 0) {
+      return (
+        <div className="faculty-info-empty">
+          <Users size={14} />
+          <span>No faculty assigned</span>
+        </div>
+      );
+    }
+
+    const isShared = faculties.length > 1;
+    const coordinator = faculties.find(f => f.isCoordinator);
+    const otherFaculties = faculties.filter(f => !f.isCoordinator);
+
+    return (
+      <div className={`faculty-info ${isShared ? 'shared-course' : ''}`}>
+        <div className="faculty-header">
+          <Users size={16} className="faculty-icon" />
+          <span className="faculty-count">
+            {faculties.length} {faculties.length === 1 ? 'Faculty' : 'Faculties'}
+            {isShared && <span className="shared-badge">Shared Course</span>}
+          </span>
+        </div>
+        <div className="faculty-list">
+          {coordinator && (
+            <div className="faculty-item coordinator" title={coordinator.email}>
+              <UserCheck size={14} className="coordinator-icon" />
+              <span className="faculty-name">{coordinator.name}</span>
+              <span className="coordinator-badge">Coordinator</span>
+            </div>
+          )}
+          {otherFaculties.map(f => (
+            <div key={f.id} className="faculty-item" title={f.email}>
+              <span className="faculty-name">{f.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // CRUD Operations
   const handleCreateAssessment = async (assessmentData) => {
     try {
-      console.log("Creating assessment:", assessmentData);
-
       const response = await assessmentApi.createAssessment({
         ...assessmentData,
         courseId: currentCourse.id,
@@ -262,7 +341,6 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
         year: currentCourse.year,
       });
 
-      // Get the created assessment ID
       const createdAssessment = response.data?.data || response.data;
       const assessmentId = createdAssessment?.id || createdAssessment?.assessment?.id;
       
@@ -270,30 +348,20 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
         throw new Error("No assessment ID returned from server");
       }
       
-      console.log("Assessment created with ID:", assessmentId);
-      
-      // Refresh the assessments list
       await loadCourseAssessments(currentCourse.id);
-      
-      // Return the ID for CLO mapping
       return { ...response.data, assessmentId };
-      
     } catch (error) {
       console.error("Error creating assessment:", error);
       throw error;
     }
   };
 
-  // Update existing assessment
   const handleUpdateAssessment = async (assessmentData) => {
     try {
-      console.log("Updating assessment:", assessmentData);
-
       await assessmentApi.updateAssessment(assessmentData.id, assessmentData);
       await loadCourseAssessments(currentCourse.id);
       setShowModal(false);
       setEditingAssessment(null);
-
       showAlert("Assessment updated successfully!", "success");
     } catch (error) {
       console.error("Error updating assessment:", error);
@@ -304,11 +372,9 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     }
   };
 
-  // Map CLOs to assessment
   const handleMapClos = async (assessmentId, cloAllocations) => {
     try {
       const response = await assessmentApi.mapClosToAssessment(assessmentId, { cloAllocations });
-      console.log('CLOs mapped:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error mapping CLOs:', error);
@@ -316,7 +382,6 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     }
   };
 
-  // Delete assessment
   const handleDeleteAssessment = async (assessmentId) => {
     if (!window.confirm("Are you sure you want to delete this assessment?"))
       return;
@@ -334,10 +399,8 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     }
   };
 
-  // Handle marks entry
   const handleEnterMarks = async (assessmentId, marksEntries) => {
     try {
-      
       console.log("Would save marks for:", assessmentId, marksEntries);
       showAlert("Marks saved successfully!", "success");
     } catch (error) {
@@ -349,7 +412,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     }
   };
 
-  // NEW: Handle full-screen performance analysis
+  // UI Handlers
   const handleOpenFullAnalysis = (assessmentId = null) => {
     setAnalysisAssessmentId(assessmentId);
     setShowFullAnalysis(true);
@@ -360,7 +423,6 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     setAnalysisAssessmentId(null);
   };
 
-  // Handle year/semester change
   const handleYearChange = (year) => {
     setSelectedYear(year);
     setIsRefreshing(true);
@@ -407,9 +469,10 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     }, 5000);
   };
 
+  // Effects
   useEffect(() => {
     loadFacultyCourses(selectedYear, selectedSemester);
-  }, []);
+  }, [selectedYear, selectedSemester]);
 
   useEffect(() => {
     if (currentCourse) {
@@ -417,9 +480,9 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
       loadCourseClos(currentCourse.id);
       loadCourseStudents(currentCourse.id);
     }
-  }, [currentCourse, loadCourseAssessments, loadCourseClos, loadCourseStudents]);
+  }, [currentCourse]);
 
-  // If showing full analysis, render only the analysis component
+  // Render full analysis view
   if (showFullAnalysis && currentCourse) {
     return (
       <div className="full-analysis-container">
@@ -448,6 +511,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     );
   }
 
+  // Render loading state
   if (loading && !isRefreshing) {
     return (
       <div className="loading-container">
@@ -457,6 +521,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
     );
   }
 
+  // Render error state
   if (apiError) {
     return (
       <div className="error-container">
@@ -477,66 +542,21 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
           <h1>
             <i className="fas fa-chalkboard-teacher"></i> Faculty Assessment Management
           </h1>
-          <div className="academic-period-selector">
-            <div className="selector-group">
-              <label htmlFor="year-select">
-                <Calendar size={14} /> Academic Year
-              </label>
-              <div className="select-wrapper">
-                <select 
-                  id="year-select"
-                  value={selectedYear}
-                  onChange={(e) => handleYearChange(parseInt(e.target.value))}
-                  disabled={isRefreshing}
-                >
-                  {yearOptions.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="select-arrow" />
-              </div>
-            </div>
-            
-            <div className="selector-group">
-              <label htmlFor="semester-select">Semester</label>
-              <div className="select-wrapper">
-                <select 
-                  id="semester-select"
-                  value={selectedSemester}
-                  onChange={(e) => handleSemesterChange(parseInt(e.target.value))}
-                  disabled={isRefreshing}
-                >
-                  {semesterOptions.map(sem => (
-                    <option key={sem.value} value={sem.value}>
-                      {sem.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="select-arrow" />
-              </div>
-            </div>
-            
-            <button 
-              className="btn-refresh" 
-              onClick={() => loadFacultyCourses()}
-              disabled={isRefreshing}
-            >
-              <RefreshCw size={16} className={isRefreshing ? "spinning" : ""} />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
-            </button>
-          </div>
-        </div>
-        
-        <div className="faculty-info">
-          <div>
-            <div className="faculty-name">Faculty Dashboard</div>
-            <div className="faculty-dept">Assessment Management</div>
-          </div>
-          <div className="faculty-avatar">FD</div>
+          
+          {/* Academic Period Selector - Imported Component */}
+          <AcademicPeriodSelector
+            selectedYear={selectedYear}
+            selectedSemester={selectedSemester}
+            onYearChange={handleYearChange}
+            onSemesterChange={handleSemesterChange}
+            onRefresh={() => loadFacultyCourses()}
+            isRefreshing={isRefreshing}
+          />
         </div>
       </div>
 
       <div className="dashboard-content">
+        {/* Sidebar */}
         <div className="sidebar">
           <div className="sidebar-header">
             <h3>My Courses ({courses.length})</h3>
@@ -554,30 +574,42 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                 <p className="hint-text">Try changing the year or semester</p>
               </div>
             ) : (
-              safeMap(courses, (course) => (
-                <li
-                  key={course.id}
-                  className={`course-item ${currentCourse?.id === course.id ? "active" : ""}`}
-                  onClick={() => setCurrentCourse(course)}
-                >
-                  <div className="course-code">{course.code}</div>
-                  <div className="course-name">{course.name}</div>
-                  <div className="course-meta">
-                    <span>Credits: {course.credits}</span>
-                    <span>Students: {course.students || 0}</span>
-                  </div>
-                  <div className="course-period">
-                    Y{currentCourse?.year} - S{currentCourse?.semester}
-                  </div>
-                </li>
-              ))
+              safeMap(courses, (course) => {
+                const faculties = courseFacultyMap[course.id] || [];
+                const isShared = faculties.length > 1;
+                return (
+                  <li
+                    key={course.id}
+                    className={`course-item ${currentCourse?.id === course.id ? "active" : ""} ${isShared ? 'shared-course' : ''}`}
+                    onClick={() => setCurrentCourse(course)}
+                  >
+                    <div className="course-code">{course.code}</div>
+                    <div className="course-name">{course.name}</div>
+                    <div className="course-meta">
+                      <span>Credits: {course.credits}</span>
+                    </div>
+                    <div className="course-period">
+                      Y{course.year} - S{course.semester}
+                    </div>
+                    {faculties.length > 0 && (
+                      <div className="course-faculty-indicator" title={`${faculties.length} faculty assigned${isShared ? ' (shared course)' : ''}`}>
+                        <Users size={12} />
+                        <span>{faculties.length}</span>
+                        {isShared && <span className="shared-indicator">S</span>}
+                      </div>
+                    )}
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>
 
+        {/* Main Content */}
         <div className="main-content">
           {currentCourse ? (
             <>
+              {/* Course Header */}
               <div className="course-header">
                 <div>
                   <h2>{currentCourse.name}</h2>
@@ -591,12 +623,12 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                       Academic Period: {currentCourse.year} - Semester {currentCourse.semester}
                     </span>
                   </div>
+                  
+                  {/* Faculty Information */}
+                  {getCurrentCourseFacultyDisplay()}
                 </div>
+                
                 <div className="course-stats">
-                  <div className="stat-box">
-                    <div className="stat-value">{currentCourse.students || 0}</div>
-                    <div className="stat-label">Students</div>
-                  </div>
                   <div className="stat-box">
                     <div className="stat-value">{courseClos.length}</div>
                     <div className="stat-label">CLOs</div>
@@ -610,6 +642,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                 </div>
               </div>
 
+              {/* Tabs */}
               <div className="tabs">
                 <button
                   className={`tab ${activeTab === "overview" ? "active" : ""}`}
@@ -631,6 +664,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                 </button>
               </div>
 
+              {/* Tab Content with Imported Components */}
               <div className="tab-content">
                 {activeTab === "overview" && (
                   <OverviewTab
@@ -639,6 +673,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                     stats={stats}
                     assessments={assessments}
                     onAnalyzeAll={() => handleOpenFullAnalysis(null)}
+                    facultyInfo={courseFacultyMap[currentCourse.id]}
                   />
                 )}
 
@@ -661,6 +696,8 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                       setActiveTab("marks");
                     }}
                     onAnalyzeAssessment={(assessmentId) => handleOpenFullAnalysis(assessmentId)}
+                    onOpenDownloadWizard={() => setShowDownloadWizard(true)}
+                    facultyInfo={courseFacultyMap[currentCourse.id]}
                   />
                 )}
 
@@ -671,6 +708,7 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
                     course={currentCourse}
                     onSelectAssessment={setSelectedAssessment}
                     onEnterMarks={handleEnterMarks}
+                    facultyInfo={courseFacultyMap[currentCourse.id]}
                   />
                 )}
               </div>
@@ -689,6 +727,23 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
         </div>
       </div>
 
+      {/* Modals */}
+      {showDownloadWizard && currentCourse && (
+        <div className="modal-overlay" onClick={(e) => {
+          if (e.target.className === 'modal-overlay') {
+            setShowDownloadWizard(false);
+          }
+        }}>
+          <div className="modal-container" style={{ width: '90%', maxWidth: '1400px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <MarksDownloadWizard
+              course={currentCourse}
+              onClose={() => setShowDownloadWizard(false)}
+              assignedFaculties={courseFacultyMap[currentCourse.id] || []}
+            />
+          </div>
+        </div>
+      )}
+
       {showModal && currentCourse && (
         <AssessmentModal
           course={currentCourse}
@@ -701,313 +756,12 @@ const AssessmentDashboard = ({ initialYear = 2026, initialSemester = 5 }) => {
           }}
           onSubmit={editingAssessment ? handleUpdateAssessment : handleCreateAssessment}
           onMapClos={handleMapClos}
-          existingAssessments={assessments} 
+          existingAssessments={assessments}
+          facultyInfo={courseFacultyMap[currentCourse.id]}
         />
       )}
     </div>
   );
 };
-
-// Updated OverviewTab with analyze all button
-const OverviewTab = ({ course, clos, stats, assessments, onAnalyzeAll }) => {
-  const safeAssessments = Array.isArray(assessments) ? assessments : [];
-  const finalizedCount = safeAssessments.filter(a => a.isMarksFinalized).length;
-
-  return (
-    <div className="overview-tab">
-      <div className="summary-cards">
-        <div className="summary-card">
-          <h4>Course CLOs</h4>
-          <div className="summary-value">{clos.length}</div>
-          <div className="summary-subtext">All mapped to POs/PSOs</div>
-        </div>
-
-        <div className="summary-card">
-          <h4>Assessments Created</h4>
-          <div className="summary-value">{stats.assessmentsCount}</div>
-          <div className="summary-subtext">Total assessments</div>
-        </div>
-
-        <div className="summary-card">
-          <h4>Marks Allocation</h4>
-          <div className="summary-value">{stats.marksPercentage}%</div>
-          <div className="summary-subtext">
-            {stats.marksUsed} of {stats.maxMarks} marks used
-          </div>
-        </div>
-
-        <div className="summary-card analysis-card">
-          <h4>Performance Analysis</h4>
-          <div className="summary-value">{finalizedCount}</div>
-          <div className="summary-subtext">Assessments finalized</div>
-          {finalizedCount > 0 && (
-            <button 
-              className="btn-analyze"
-              onClick={onAnalyzeAll}
-            >
-              <BarChart size={14} /> Analyze All
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="clos-section">
-        <h3>Course CLOs</h3>
-        {clos.length === 0 ? (
-          <div className="no-clos">
-            <Award size={48} />
-            <p>No CLOs defined for this course</p>
-          </div>
-        ) : (
-          <div className="clos-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>CLO Code</th>
-                  <th>Statement</th>
-                  <th>Bloom Level</th>
-                  <th>Threshold</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clos.map((clo, index) => (
-                  <tr key={clo.id || index}>
-                    <td><strong>{clo.code}</strong></td>
-                    <td>{clo.statement || "No description"}</td>
-                    <td>
-                      <span className={`bloom-level ${(clo.bloomLevel || "").toLowerCase()}`}>
-                        {clo.bloomLevel || "N/A"}
-                      </span>
-                    </td>
-                    <td>{clo.attainmentThreshold || 50}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Updated AssessmentsTab with analyze button
-const AssessmentsTab = ({
-  assessments,
-  course,
-  onOpenModal,
-  onEditAssessment,
-  onDeleteAssessment,
-  onViewMarks,
-  onAnalyzeAssessment,
-}) => {
-  const safeAssessments = Array.isArray(assessments) ? assessments : [];
-  const maxMarks = (course?.credits || 0) * 25;
-  const usedMarks = safeAssessments.reduce(
-    (sum, a) => sum + (a.maxMarks || 0),
-    0
-  );
-  const remaining = maxMarks - usedMarks;
-
-  return (
-    <div className="assessments-tab">
-      <div className="section-title">
-        <h3>Course Assessments</h3>
-        <button className="btn btn-primary" onClick={onOpenModal}>
-          <Plus size={16} /> Create Assessment
-        </button>
-      </div>
-
-      <div className={`alert ${remaining <= 0 ? "alert-danger" : "alert-warning"}`}>
-        <AlertCircle size={20} />
-        <div className="alert-content">
-          <strong>Note:</strong> Total marks for all assessments cannot exceed 25 × credits ={" "}
-          <strong>{maxMarks}</strong> marks.
-          {remaining <= 0 && " All marks have been allocated!"}
-        </div>
-      </div>
-
-      <div className="assessments-list">
-        {safeAssessments.length === 0 ? (
-          <div className="no-assessments">
-            <FileText size={48} />
-            <h4>No Assessments Created</h4>
-            <p>Create your first assessment to get started.</p>
-          </div>
-        ) : (
-          safeAssessments.map((assessment, index) => (
-            <div
-              key={assessment.id || `assessment-${index}`}
-              className={`assessment-card ${assessment.type || "theory"} ${assessment.isMarksFinalized ? 'finalized' : ''}`}
-            >
-              <div className="assessment-header">
-                <div className="assessment-title">
-                  {assessment.title || `Assessment ${index + 1}`}
-                  {assessment.isMarksFinalized && (
-                    <span className="finalized-badge-small">Finalized</span>
-                  )}
-                </div>
-                <span className={`assessment-type type-${assessment.type || "theory"}`}>
-                  {(assessment.type || "theory").charAt(0).toUpperCase() +
-                    (assessment.type || "theory").slice(1)}
-                </span>
-              </div>
-              <div className="assessment-details">
-                <div className="detail-row">
-                  <span className="detail-label">Mode:</span>
-                  <span className="detail-value">{assessment.mode || "Written"}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Max Marks:</span>
-                  <span className="detail-value">{assessment.maxMarks || 0}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Scheduled:</span>
-                  <span className="detail-value">
-                    {assessment.scheduledDate
-                      ? new Date(assessment.scheduledDate).toLocaleDateString()
-                      : "Not scheduled"}
-                  </span>
-                </div>
-              </div>
-
-              {assessment.assessmentClos && assessment.assessmentClos.length > 0 && (
-                <div className="clo-tags">
-                  {assessment.assessmentClos.map((ac, idx) => (
-                    <span key={idx} className="clo-tag">
-                      {ac.clo?.code || "CLO"} ({ac.marksAllocated || 0}m)
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="assessment-actions">
-                <button
-                  className="btn btn-outline"
-                  onClick={() => onEditAssessment(assessment)}
-                  disabled={assessment.isMarksFinalized}
-                >
-                  <Edit size={14} /> Edit
-                </button>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => onViewMarks(assessment)}
-                >
-                  <FileText size={14} />
-                  {assessment._count?.marks > 0 || assessment.marksCount > 0
-                    ? "View Marks"
-                    : "Enter Marks"}
-                </button>
-                
-                {assessment.isMarksFinalized && (
-                  <button
-                    className="btn btn-outline btn-analyze"
-                    onClick={() => onAnalyzeAssessment(assessment.id)}
-                    title="Analyze student performance"
-                  >
-                    <BarChart size={14} /> Analyze
-                  </button>
-                )}
-                
-                {!(assessment._count?.marks > 0 || assessment.marksCount > 0) && !assessment.isMarksFinalized && (
-                  <button
-                    className="btn btn-outline btn-danger"
-                    onClick={() => onDeleteAssessment(assessment.id)}
-                  >
-                    <Trash2 size={14} /> Delete
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Add CSS styles for full analysis view
-const styles = `
-.full-analysis-container {
-  min-height: 100vh;
-  background: #f8f9fa;
-}
-
-.analysis-header {
-  background: white;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e9ecef;
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-
-.analysis-header h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #2c3e50;
-  flex: 1;
-}
-
-.analysis-course-info {
-  color: #6c757d;
-  font-size: 0.95rem;
-  padding: 0.5rem 1rem;
-  background: #f8f9fa;
-  border-radius: 20px;
-  border: 1px solid #e9ecef;
-}
-
-.btn-back {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  color: #495057;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-back:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-  color: #212529;
-}
-
-@media (max-width: 768px) {
-  .analysis-header {
-    padding: 1rem;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-  
-  .analysis-header h2 {
-    font-size: 1.25rem;
-    order: 3;
-    width: 100%;
-  }
-  
-  .analysis-course-info {
-    order: 2;
-  }
-  
-  .btn-back {
-    order: 1;
-  }
-}
-`;
-
-// Inject styles
-const styleSheet = document.createElement("style");
-styleSheet.textContent = styles;
-document.head.appendChild(styleSheet);
 
 export default AssessmentDashboard;

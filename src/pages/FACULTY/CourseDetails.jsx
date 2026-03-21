@@ -1,17 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import facultyApi from '../../apis/faculty';
-import { 
-  ArrowLeft, 
-  BookOpen, 
-  Award, 
-  Users, 
+import {
+  ArrowLeft,
+  BookOpen,
+  Award,
   Calendar,
   FileText,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 
-const CourseDetails = () => {
+const BLOOM_STYLES = {
+  REMEMBER:   { badge: 'bg-sky-100 text-sky-700 border border-sky-200',              dot: 'bg-sky-400' },
+  UNDERSTAND: { badge: 'bg-emerald-100 text-emerald-700 border border-emerald-200',  dot: 'bg-emerald-400' },
+  APPLY:      { badge: 'bg-amber-100 text-amber-700 border border-amber-200',        dot: 'bg-amber-400' },
+  ANALYZE:    { badge: 'bg-orange-100 text-orange-700 border border-orange-200',     dot: 'bg-orange-400' },
+  EVALUATE:   { badge: 'bg-rose-100 text-rose-700 border border-rose-200',           dot: 'bg-rose-400' },
+  CREATE:     { badge: 'bg-violet-100 text-violet-700 border border-violet-200',     dot: 'bg-violet-400' },
+};
+
+const TYPE_STYLES = {
+  THEORY:     'bg-blue-50 text-blue-700 border border-blue-200',
+  PRACTICAL:  'bg-green-50 text-green-700 border border-green-200',
+  INTEGRATED: 'bg-purple-50 text-purple-700 border border-purple-200',
+};
+
+const SectionCard = ({ icon: Icon, title, badge, children }) => (
+  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+        <Icon className="h-4 w-4 text-gray-400" />
+        {title}
+      </h2>
+      {badge !== undefined && (
+        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+          {badge}
+        </span>
+      )}
+    </div>
+    <div className="p-5">{children}</div>
+  </div>
+);
+
+const DetailRow = ({ label, value }) => (
+  <div className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+    <span className="text-xs text-gray-500 font-medium">{label}</span>
+    <span className="text-sm text-gray-800 font-medium text-right max-w-[60%]">{value}</span>
+  </div>
+);
+
+export default function CourseDetails() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
@@ -19,313 +57,189 @@ const CourseDetails = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadCourseDetails();
+    (async () => {
+      try {
+        setLoading(true);
+        const { data } = await facultyApi.getCourseDetails(courseId);
+        setCourse(data);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Failed to load course details');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [courseId]);
 
-  const loadCourseDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await facultyApi.getCourseDetails(courseId);
-      setCourse(response.data);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load course details');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const goBack = () => navigate('/faculty/dashboard');
 
-  const getBloomLevelColor = (level) => {
-    const colors = {
-      REMEMBER: 'bg-blue-100 text-blue-800',
-      UNDERSTAND: 'bg-green-100 text-green-800',
-      APPLY: 'bg-yellow-100 text-yellow-800',
-      ANALYZE: 'bg-orange-100 text-orange-800',
-      EVALUATE: 'bg-red-100 text-red-800',
-      CREATE: 'bg-purple-100 text-purple-800'
-    };
-    return colors[level] || 'bg-gray-100 text-gray-800';
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading course details...</p>
-        </div>
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent mx-auto" />
+        <p className="mt-3 text-sm text-gray-500">Loading course details…</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error</h3>
-          <p className="text-red-700">{error}</p>
-          <button
-            onClick={() => navigate('/faculty/dashboard')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+      <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-4 mb-4">{error}</p>
+      <button onClick={goBack} className="text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
+    </div>
+  );
 
-  if (!course) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <BookOpen className="h-12 w-12 text-gray-400 mx-auto" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">Course not found</h3>
-          <p className="mt-2 text-gray-500">The requested course could not be found.</p>
-          <button
-            onClick={() => navigate('/faculty/dashboard')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!course) return (
+    <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+      <BookOpen className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+      <p className="text-gray-500 text-sm">Course not found.</p>
+      <button onClick={goBack} className="mt-3 text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
+    </div>
+  );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+
+        {/* Back */}
         <button
-          onClick={() => navigate('/faculty/dashboard')}
-          className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          onClick={goBack}
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
+          <ArrowLeft className="h-4 w-4" />
+          Dashboard
         </button>
-        
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center">
-              <BookOpen className="h-8 w-8 text-blue-600 mr-3" />
+
+        {/* Course Header */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-5 mb-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 bg-blue-50 rounded-lg shrink-0">
+                <BookOpen className="h-6 w-6 text-blue-600" />
+              </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{course.name}</h1>
-                <div className="flex items-center mt-2 space-x-4">
-                  <span className="font-mono text-lg bg-blue-100 text-blue-800 px-3 py-1 rounded">
+                <h1 className="text-xl font-bold text-gray-900 leading-tight">{course.name}</h1>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="font-mono text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-md">
                     {course.code}
                   </span>
-                  <span className="text-gray-600">
-                    {course.credits || 0} Credits • Semester {course.semester}
-                  </span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${course.type === 'THEORY' ? 'bg-blue-100 text-blue-800' : course.type === 'PRACTICAL' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${TYPE_STYLES[course.type] || 'bg-gray-100 text-gray-600'}`}>
                     {course.type}
                   </span>
+                  <span className="text-xs text-gray-400">
+                    {course.credits || 0} Credits • Semester {course.semester}
+                  </span>
+                  {course.department && (
+                    <span className="text-xs text-gray-400">• {course.department.name}</span>
+                  )}
                 </div>
               </div>
             </div>
-            
-            {course.department && (
-              <div className="mt-4">
-                <p className="text-gray-700">
-                  <span className="font-medium">Department:</span> {course.department.name} ({course.department.code})
-                </p>
+
+            {course.createdBy && (
+              <div className="text-right shrink-0">
+                <p className="text-xs text-gray-400 mb-0.5">Created by</p>
+                <p className="text-sm font-medium text-gray-700">{course.createdBy.name}</p>
+                <p className="text-xs text-gray-400">{course.createdBy.email}</p>
               </div>
             )}
           </div>
-          
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Created by</p>
-            <p className="font-medium">{course.createdBy?.name || 'Unknown'}</p>
-            <p className="text-sm text-gray-600">{course.createdBy?.email}</p>
-          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Course Info & CLOs */}
-        <div className="lg:col-span-2">
-          {/* Course Description */}
-          {course.description && (
-            <div className="bg-white rounded-lg shadow mb-8">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Course Description
-                </h2>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-700 whitespace-pre-line">{course.description}</p>
-              </div>
-            </div>
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* CLOs Section */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <Award className="h-5 w-5 mr-2" />
-                  Course Learning Outcomes (CLOs)
-                </h2>
-                <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
-                  {course.clos.length} CLOs
-                </span>
-              </div>
-            </div>
-            
-            <div className="p-6">
+          {/* Left: Description + CLOs */}
+          <div className="lg:col-span-2 space-y-6">
+            {course.description && (
+              <SectionCard icon={FileText} title="Description">
+                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{course.description}</p>
+              </SectionCard>
+            )}
+
+            <SectionCard
+              icon={Award}
+              title="Course Learning Outcomes"
+              badge={`${course.clos.length} CLO${course.clos.length !== 1 ? 's' : ''}`}
+            >
               {course.clos.length === 0 ? (
-                <div className="text-center py-8">
-                  <Award className="h-12 w-12 text-gray-400 mx-auto" />
-                  <p className="mt-4 text-gray-500">No CLOs defined for this course</p>
-                </div>
+                <p className="text-sm text-gray-400 text-center py-6">No CLOs defined for this course.</p>
               ) : (
-                <div className="space-y-4">
-                  {course.clos.map((clo) => (
-                    <div key={clo.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center mb-2">
-                            <span className="font-mono font-bold text-lg text-blue-600 mr-3">
-                              {clo.code}
-                            </span>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getBloomLevelColor(clo.bloomLevel)}`}>
+                <div className="space-y-3">
+                  {course.clos.map((clo) => {
+                    const style = BLOOM_STYLES[clo.bloomLevel] || {
+                      badge: 'bg-gray-100 text-gray-600 border border-gray-200',
+                      dot: 'bg-gray-400',
+                    };
+                    return (
+                      <div key={clo.id} className="flex gap-3 p-3.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${style.dot}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="font-mono text-sm font-bold text-blue-600">{clo.code}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.badge}`}>
                               {clo.bloomLevel}
                             </span>
-                            <span className="ml-3 text-sm text-gray-500">
-                              Threshold: {clo.attainmentThreshold}%
-                            </span>
+                            <span className="text-xs text-gray-400">Threshold: {clo.attainmentThreshold}%</span>
                           </div>
-                          <p className="text-gray-700">{clo.statement}</p>
+                          <p className="text-sm text-gray-700">{clo.statement}</p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
-            </div>
+            </SectionCard>
           </div>
-        </div>
 
-        {/* Right Column - Assignment History & Details */}
-        <div className="space-y-6">
-          {/* Assignment History */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
-                Your Assignment History
-              </h2>
-            </div>
-            <div className="p-6">
+          {/* Right: Course Info + Assignment History */}
+          <div className="space-y-6">
+            <SectionCard icon={BarChart3} title="Course Info">
+              <DetailRow label="Code" value={<span className="font-mono">{course.code}</span>} />
+              <DetailRow label="Semester" value={`Semester ${course.semester}`} />
+              <DetailRow label="Credits" value={`${course.credits || 0} Credits`} />
+              <DetailRow label="Type" value={course.type.charAt(0) + course.type.slice(1).toLowerCase()} />
+              {course.category && <DetailRow label="Category" value={course.category} />}
+              {course.regulation && <DetailRow label="Regulation" value={course.regulation} />}
+              {course.department && (
+                <DetailRow
+                  label="Department"
+                  value={`${course.department.name} (${course.department.code})`}
+                />
+              )}
+            </SectionCard>
+
+            <SectionCard
+              icon={Calendar}
+              title="Assignment History"
+              badge={course.facultyAssignments?.length || 0}
+            >
               {course.facultyAssignments?.length > 0 ? (
-                <div className="space-y-4">
-                  {course.facultyAssignments.map((assignment, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">
-                          {assignment.year} - Semester {assignment.semester}
-                        </span>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        {assignment.teachingMethodology && (
-                          <p>
-                            <span className="font-medium">Teaching:</span> {assignment.teachingMethodology}
-                          </p>
-                        )}
-                        {assignment.assessmentMode && (
-                          <p>
-                            <span className="font-medium">Assessment:</span> {assignment.assessmentMode}
-                          </p>
-                        )}
-                      </div>
+                <div className="space-y-3">
+                  {course.facultyAssignments.map((a, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-gray-100 bg-gray-50">
+                      <p className="text-sm font-semibold text-gray-800 mb-1.5">
+                        {a.year} — Semester {a.semester}
+                      </p>
+                      {a.teachingMethodology && (
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium text-gray-600">Teaching:</span> {a.teachingMethodology}
+                        </p>
+                      )}
+                      {a.assessmentMode && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          <span className="font-medium text-gray-600">Assessment:</span> {a.assessmentMode}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">No assignment history found</p>
+                <p className="text-sm text-gray-400 text-center py-4">No assignment history found.</p>
               )}
-            </div>
+            </SectionCard>
           </div>
 
-          {/* Course Details */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
-                Course Details
-              </h2>
-            </div>
-            <div className="p-6">
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Course Code</dt>
-                  <dd className="mt-1 font-mono">{course.code}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Course Name</dt>
-                  <dd className="mt-1">{course.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Semester</dt>
-                  <dd className="mt-1">Semester {course.semester}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Credits</dt>
-                  <dd className="mt-1">{course.credits || 0} Credits</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Type</dt>
-                  <dd className="mt-1 capitalize">{course.type.toLowerCase()}</dd>
-                </div>
-                {course.category && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Category</dt>
-                    <dd className="mt-1">{course.category}</dd>
-                  </div>
-                )}
-                {course.regulation && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Regulation</dt>
-                    <dd className="mt-1">{course.regulation}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800">Quick Actions</h2>
-            </div>
-            <div className="p-6">
-              <div className="space-y-3">
-                <button className="w-full text-left p-3 border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
-                  <div className="flex items-center">
-                    <Award className="h-5 w-5 text-blue-600 mr-3" />
-                    <span>Add/Edit CLOs</span>
-                  </div>
-                </button>
-                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center">
-                    <BarChart3 className="h-5 w-5 text-green-600 mr-3" />
-                    <span>View Assessment Data</span>
-                  </div>
-                </button>
-                <button className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center">
-                    <FileText className="h-5 w-5 text-purple-600 mr-3" />
-                    <span>Generate Course Report</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default CourseDetails;
+}
