@@ -12,6 +12,7 @@ import CLOMapping from "../pages/HOD/CLOSetup/CLOMapping";
 import AssignFaculty from "../pages/HOD/AssignFaculty/AssignFaculty";
 import AssignmentsDashboard from "../pages/HOD/AssignmentsDashboard";
 import ProgramReports from "../pages/HOD/ProgramReports";
+import ViewAttainment from "../pages/HOD/ViewAttainment";
 import CourseDetails from "../pages/FACULTY/CourseDetails";
 import FacultyDashboard from "../pages/FACULTY/Dashboard";
 import FacultyAssignments from "../pages/FACULTY/FacultyAssignments";
@@ -122,6 +123,14 @@ export const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/attainment-review"
+          element={
+            <ProtectedRoute allowedRoles={["HOD"]}>
+              <ViewAttainment />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* PROTECTED FACULTY ROUTES */}
@@ -176,27 +185,42 @@ export const AppRoutes = () => {
       </Route>
 
       {/* ADMIN ROUTES */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="programs/:level" element={<ProgramsByLevel />} />
         <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={["ADMIN"]}>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="programs/:level" element={<ProgramsByLevel />} />
-          <Route path="program/:programId/departments" element={<DepartmentsByProgram />} />
-          <Route path="department/:departmentId/courses" element={<CoursesByDepartment />} />
-          <Route path="course/:courseId" element={<AdminCourseDetails />} />
-          <Route path="users" element={<UserManagement />} />
-          
-          {/* You can add these later */}
-          <Route path="program/:programId" element={<div>Program Details Page</div>} />
-          <Route path="department/:departmentId" element={<div>Department Details Page</div>} />
-          <Route path="course/:courseId" element={<div>Course Details Page</div>} />
-        </Route>
+          path="program/:programId/departments"
+          element={<DepartmentsByProgram />}
+        />
+        <Route
+          path="department/:departmentId/courses"
+          element={<CoursesByDepartment />}
+        />
+        <Route path="course/:courseId" element={<AdminCourseDetails />} />
+        <Route path="users" element={<UserManagement />} />
+
+        {/* You can add these later */}
+        <Route
+          path="program/:programId"
+          element={<div>Program Details Page</div>}
+        />
+        <Route
+          path="department/:departmentId"
+          element={<div>Department Details Page</div>}
+        />
+        <Route
+          path="course/:courseId"
+          element={<div>Course Details Page</div>}
+        />
+      </Route>
 
       {/* UNAUTHORIZED PAGE */}
       <Route

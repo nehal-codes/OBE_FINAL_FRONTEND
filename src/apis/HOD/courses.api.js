@@ -21,6 +21,11 @@ const getAutoCode = (programmeId, token) =>
     headers: { Authorization: `Bearer ${token}` },
   });
 
+const getCoursesByAcademicPeriod = (year, semester, token) => {
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  return api.get(`/hod/courses?year=${year}&semester=${semester}`, config);
+};
+
 const coursesAPI = {
   getCourses,
   getAll,
@@ -29,6 +34,7 @@ const coursesAPI = {
   updateCourse,
   deleteCourse,
   getAutoCode,
+  getCoursesByAcademicPeriod,
 };
 
 export default coursesAPI;

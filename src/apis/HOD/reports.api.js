@@ -15,10 +15,19 @@ const getCourseContributions = (courseId, token) => {
   return api.get(`/hod/reports/course/${courseId}/contributions`, config);
 };
 
+const getCourseAttainment = (courseId, year, semester, token) => {
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  return api.get(
+    `/hod/reports/course/${courseId}/attainment?year=${year}&semester=${semester}`,
+    config,
+  );
+};
+
 // Export all report API functions
 const reportsAPI = {
   getProgramReport,
   getCourseContributions,
+  getCourseAttainment,
 };
 
 export default reportsAPI;

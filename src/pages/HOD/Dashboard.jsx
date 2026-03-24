@@ -312,7 +312,7 @@ export default function Dashboard() {
           Dashboard updated in real-time • Data refreshes every 5 minutes
           <span className="mx-2">•</span>
           <span className="inline-flex items-center">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></div>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse inline-block"></span>
             System Status: Operational
           </span>
         </p>

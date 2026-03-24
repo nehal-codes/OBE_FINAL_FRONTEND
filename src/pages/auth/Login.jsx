@@ -22,10 +22,12 @@ const Login = () => {
     try {
       await login(credentials);
       console.log("Login successful");
-      if(JSON.parse(localStorage.getItem("user")).role === "HOD") {
+      if (JSON.parse(localStorage.getItem("user")).role === "HOD") {
         navigate("/dashboard");
-      } else if(JSON.parse(localStorage.getItem("user")).role === "FACULTY") {
+      } else if (JSON.parse(localStorage.getItem("user")).role === "FACULTY") {
         navigate("/faculty/dashboard");
+      } else if (JSON.parse(localStorage.getItem("user")).role === "ADMIN") {
+        navigate("/admin/dashboard");
       } else {
         setError("Unknown user role. Please contact support.");
       }
