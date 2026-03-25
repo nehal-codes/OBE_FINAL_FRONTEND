@@ -108,13 +108,13 @@ const AssessmentsTab = ({
               )}
 
               <div className="assessment-actions">
-                <button
+              {!assessment.isMarksFinalized &&  <button
                   className="btn btn-outline"
                   onClick={() => onEditAssessment(assessment)}
                   disabled={assessment.isMarksFinalized}
                 >
                   <Edit size={14} /> Edit
-                </button>
+                </button>}
                 <button
                   className="btn btn-outline"
                   onClick={() => onViewMarks(assessment)}
