@@ -1272,7 +1272,7 @@ const AssessmentDetailsTable = ({ isAllMode, performanceData }) => {
         <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Finalized Assessments</div>
         <div style={{ overflowX: 'auto' }}>
           <table style={S.table}>
-            <thead><tr>{['#','Title','Type','Max Marks','Students','Class Avg %','CLOs'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{['#','Title','Type','Max Marks','CLOs'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {assessments.map((a, i) => {
                 const st = stats[i];
@@ -1282,13 +1282,7 @@ const AssessmentDetailsTable = ({ isAllMode, performanceData }) => {
                     <td style={S.td}><strong>{a.title}</strong></td>
                     <td style={S.td}><span style={{ padding: '2px 8px', borderRadius: 8, background: '#eff6ff', color: '#2563eb', fontSize: 11, fontWeight: 600 }}>{a.type || '—'}</span></td>
                     <td style={S.td}>{a.maxMarks ?? '—'}</td>
-                    <td style={S.td}>{st?.totalStudents ?? '—'}</td>
-                    <td style={S.td}>
-                      <div style={S.barWrap}>
-                        <div style={S.barTrack}><div style={S.barFill(st?.classAverage ?? 0, calculateAttainmentLevel(st?.classAverage ?? 0, 50))} /></div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#374151', width: 38, textAlign: 'right' }}>{(st?.classAverage ?? 0).toFixed(1)}%</span>
-                      </div>
-                    </td>
+                   
                     <td style={S.td}>{st?.clos?.length ?? '—'}</td>
                   </tr>
                 );
@@ -1714,7 +1708,7 @@ const AttainmentSummary = ({ cloList, hasIndirectData }) => {
       <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)', border: `2px solid ${levelBorder(cFL)}`, borderRadius: 12, padding: '16px 20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Course-Level Final Attainment</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}> Final Attainment</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center', padding: '8px 14px', borderRadius: 8, background: '#fff', border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 2 }}>Avg Direct</div>
@@ -2528,7 +2522,7 @@ const StudentPerformanceAnalysis = ({
 
         {/* 6 · CLO Attainment Summary + Course Final Score */}
         <Section
-          title="CLO Attainment Summary & Course Final Score"
+          title="CLO Attainment Summary & Final Score"
           icon={Award} iconColor="#dc2626" iconBg="#fee2e2"
           sectionKey="attainmentSummary" expanded={expandedSections.attainmentSummary} onToggle={toggleSection}
           stepNum={isAllMode ? 6 : 5}

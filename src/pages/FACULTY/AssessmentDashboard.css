@@ -1848,6 +1848,294 @@
   font-size: 9px;
   font-weight: 700;
 }
+/* Add these styles to your AssessmentDashboard.css */
+
+/* Section Header with Action Button */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Analyze All Button - Consistent with other action buttons */
+.btn-analyze-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(67, 97, 238, 0.2);
+  position: relative;
+}
+
+.btn-analyze-all:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(67, 97, 238, 0.3);
+}
+
+.btn-analyze-all:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-analyze-all:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--gray-text);
+  box-shadow: none;
+}
+
+.btn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: var(--light-bg);
+  border-radius: 12px;
+  color: var(--gray-text);
+}
+
+.empty-state svg {
+  color: var(--border-color);
+  margin-bottom: 16px;
+}
+
+.empty-state h4 {
+  margin: 0 0 8px 0;
+  color: var(--dark-text);
+  font-size: 18px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* CLO Table Wrapper */
+.clos-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: white;
+}
+
+.clos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.clos-table th {
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--light-bg);
+  color: var(--gray-text);
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.clos-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.clos-table tr:last-child td {
+  border-bottom: none;
+}
+
+.clos-table tr:hover {
+  background: var(--light-bg);
+}
+
+.clo-code {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-family: monospace;
+}
+
+.clo-statement {
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Bloom Level Badges */
+.bloom-level {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--light-bg);
+  color: var(--gray-text);
+  border: 1px solid var(--border-color);
+}
+
+.bloom-level.remember { background: #e3f2fd; color: var(--primary-color); border-color: #bbdef5; }
+.bloom-level.understand { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+.bloom-level.apply { background: #fff3e0; color: #ed6c02; border-color: #ffe0b2; }
+.bloom-level.analyze { background: #fce4ec; color: #c2185b; border-color: #f8bbd0; }
+.bloom-level.evaluate { background: #f3e5f5; color: #7b1fa2; border-color: #e1bee7; }
+.bloom-level.create { background: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+
+/* Threshold Badge */
+.threshold-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--light-bg);
+  border-radius: 20px;
+  font-weight: 600;
+  color: var(--dark-text);
+  font-size: 13px;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.status-ready {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.status-pending {
+  background: #fff3e0;
+  color: #ed6c02;
+  border: 1px solid #ffe0b2;
+}
+
+/* Attainment Summary */
+.attainment-summary {
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.summary-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.summary-info svg {
+  color: var(--primary-color);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-content strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--dark-text);
+  font-size: 14px;
+}
+
+.info-content p {
+  margin: 0;
+  color: var(--gray-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .btn-analyze-all {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .clos-table th,
+  .clos-table td {
+    padding: 10px 12px;
+  }
+  
+  .clo-statement {
+    max-width: 250px;
+  }
+  
+  .attainment-summary {
+    padding: 16px;
+  }
+  
+  .summary-info {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .clos-table {
+    font-size: 12px;
+  }
+  
+  .clos-table th,
+  .clos-table td {
+    padding: 8px 10px;
+  }
+  
+  .status-badge,
+  .bloom-level,
+  .threshold-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}
 
 @keyframes spin {
   to { transform: rotate(360deg); }
