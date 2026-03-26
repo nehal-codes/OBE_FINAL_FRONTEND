@@ -16,12 +16,20 @@ const getCourseContributions = (courseId, token) => {
 };
 
 const getCourseAttainment = (courseId, year, semester, token) => {
-  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   return api.get(
-    `/hod/reports/course/${courseId}/attainment?year=${year}&semester=${semester}`,
-    config,
+    `/hod/course/${courseId}/attainment/${year}/${semester}`, // ✅ FIXED
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
   );
 };
+
+// const getCourseAttainment = (courseId, year, semester, token) => {
+//   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+//   return api.get(`/hod/course/${courseId}/attainment`, config);
+// };
 
 // Export all report API functions
 const reportsAPI = {

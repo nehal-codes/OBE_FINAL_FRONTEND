@@ -22,38 +22,7 @@ import {
   FiAward,
 } from "react-icons/fi";
 
-// const menuItems = [
-//   // DASHBOARD - Now role-specific
-//   {
-//     text: "Dashboard",
-//     icon: <FiGrid />,
-//     path: {  // Make path dynamic based on role
-//       ADMIN: "/admin/dashboard",
-//       HOD: "/dashboard",
-//       FACULTY: "/faculty/dashboard"
-//     },
-//     roles: ["HOD", "FACULTY", "ADMIN"],
-//   FiList,
-//   FiAward,
-// } from "react-icons/fi";
-
-// ];
-
 const menuItems = [
-  // {
-  //   text: "Dashboard",
-  //   icon: <FiGrid />,
-  //   path: {
-  //     // Make path dynamic based on role
-  //     ADMIN: "/admin/dashboard",
-  //     HOD: "/dashboard",
-  //     FACULTY: "/faculty/dashboard",
-  //   },
-  //   roles: ["HOD", "FACULTY", "ADMIN"],
-  //   FiList,
-  //   FiAward,
-  // },
-
   // FACULTY Routes
   {
     text: "Faculty Dashboard",
@@ -74,24 +43,6 @@ const menuItems = [
     roles: ["FACULTY"],
   },
 
-  {
-    text: "Dashboard",
-    icon: <FiGrid />,
-    path: "/dashboard",
-    roles: ["HOD"],
-  },
-  {
-    text: "Course Management",
-    icon: <FiBook />,
-    path: "/hod/courses",
-    roles: ["HOD"],
-  },
-  {
-    text: "Attainment Review",
-    icon: <FiCheckCircle />,
-    path: "/attainment-review",
-    roles: ["FACULTY", "HOD"],
-  },
   // ADMIN SPECIFIC MENU ITEMS
   {
     text: "Programs",
@@ -118,12 +69,35 @@ const menuItems = [
     roles: ["ADMIN"],
   },
   // HOD SPECIFIC MENU ITEMS
+
+  {
+    text: "Dashboard",
+    icon: <FiGrid />,
+    path: "/dashboard",
+    roles: ["HOD"],
+  },
+
+  {
+    text: "Course Management",
+    icon: <FiBook />,
+    path: "/hod/courses",
+    roles: ["HOD"],
+  },
+
   {
     text: "Faculty Assignment",
     icon: <FiClipboard />,
     path: "/faculty-assignment",
     roles: ["HOD"],
   },
+
+  {
+    text: "Attainment Review",
+    icon: <FiCheckCircle />,
+    path: "/attainment-review",
+    roles: ["FACULTY", "HOD"],
+  },
+
   {
     text: "Question Bank",
     icon: <FiFileText />,

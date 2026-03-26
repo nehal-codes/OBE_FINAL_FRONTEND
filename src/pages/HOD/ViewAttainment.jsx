@@ -1,474 +1,579 @@
-import React, { useState, useEffect } from "react";
-import {
-  FiFilter,
-  FiTrendingUp,
-  FiBarChart2,
-  FiUsers,
-  FiTarget,
-  FiChevronDown,
-} from "react-icons/fi";
-import { useAuth } from "../../contexts/AuthContext";
+import React, { useState, useEffect, useRef } from "react";
+import html2pdf from "html2pdf.js";
 import coursesAPI from "../../apis/HOD/courses.api";
 import reportsAPI from "../../apis/HOD/reports.api";
+
+/* COLORS SAME AS PDF */
+const LEVEL_COLORS = {
+  0: "#dc2626",
+  1: "#d97706",
+  2: "#2563eb",
+  3: "#16a34a",
+};
+
+const levelLabel = (l) => ["Low", "Good", "Very Good", "Excellent"][l];
+
+/* Helper function to calculate attainment level */
+const calculateAttainmentLevel = (percentage, threshold) => {
+  if (percentage < threshold) return 0;
+  if (percentage < threshold + 10) return 1;
+  if (percentage < threshold + 20) return 2;
+  return 3;
+};
+
+/* Sort CLOs by code */
+const sortCLOs = (clos) => {
+  if (!clos || !Array.isArray(clos)) return [];
+  return [...clos].sort((a, b) => {
+    const aNum = parseInt(a.cloCode?.match(/\d+/) || [0]);
+    const bNum = parseInt(b.cloCode?.match(/\d+/) || [0]);
+    return aNum - bNum;
+  });
+};
+
+/* Build PDF HTML using the template – with page numbers via CSS */
+const buildPDFHTML = (data) => {
+  if (!data) return "<div>No data available</div>";
+
+  const {
+    courseSummary,
+    cloDetails,
+    courseCode,
+    courseName,
+    semester,
+    year,
+    facultyName,
+  } = data;
+
+  const cl = sortCLOs(cloDetails || []);
+  const hi = cloDetails?.some((clo) => clo.indirect?.levelLabel);
+
+  const lc = LEVEL_COLORS;
+
+  const cD =
+    cl.length > 0
+      ? cl.reduce((s, c) => s + (c.direct?.level || 0), 0) / cl.length
+      : 0;
+  const cI =
+    hi && cl.length > 0
+      ? cl.reduce((s, c) => s + (c.indirect?.level || 0), 0) / cl.length
+      : null;
+  const cF = courseSummary?.finalScore || (hi ? 0.8 * cD + 0.2 * cI : cD);
+  const cFL = courseSummary?.finalLevel || Math.min(3, Math.round(cF));
+
+  const facultyLine = facultyName
+    ? `<div class="faculty-line"><strong>Faculty:</strong> ${facultyName}</div>`
+    : "";
+
+  const cloRows = cl
+    .map((clo) => {
+      const direct = clo.direct || {};
+      const indirect = clo.indirect || {};
+      const hasIndirect = hi && indirect.level !== undefined;
+
+      const fS = clo.final?.score || direct.level || 0;
+      const fL = clo.final?.level || direct.level || 0;
+
+      const indC = hasIndirect
+        ? `|<td>${indirect.avgLevel?.toFixed(2) || "—"}</td><td style="color:${lc[indirect.level]};font-weight:600">L${indirect.level} ${indirect.levelLabel || levelLabel(indirect.level)}</td>`
+        : "";
+
+      return `<tr>
+        <td><strong>${clo.cloCode || "N/A"}</strong></td>
+        <td>${clo.bloomLevel || "N/A"}</td>
+        <td>${clo.threshold || 0}%</td>
+        <td>${direct.attainedStudents || 0}/${direct.totalStudents || 0}</td>
+        <td>${(direct.level || 0).toFixed(2)}</td>
+        <td style="color:${lc[direct.level]};font-weight:600">L${direct.level} ${direct.levelLabel || levelLabel(direct.level)}</td>
+        ${indC}
+        <td><strong>${fS.toFixed(2)}</strong></td>
+        <td style="color:${lc[fL]};font-weight:700">L${fL} ${levelLabel(fL)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  let indSec = "";
+  if (hi && cloDetails) {
+    indSec =
+      `<h2><strong>Indirect Assessment — Student Ratings</strong></h2>` +
+      cl
+        .filter((clo) => clo.indirect?.studentRatings)
+        .map((clo) => {
+          const ratings = clo.indirect.studentRatings || [];
+          const rows = ratings
+            .slice(0, 60)
+            .map(
+              (s) =>
+                `<tr><td>${s.rollNumber || s.rollNo || "N/A"}</td><td>${s.name || "N/A"}</td><td>L${s.level} ${levelLabel(s.level)}</td></tr>`,
+            )
+            .join("");
+          return `<h4><strong>${clo.cloCode}</strong> — avg level: ${clo.indirect.avgLevel?.toFixed(2) || "N/A"} | L${clo.indirect.level} ${clo.indirect.levelLabel || levelLabel(clo.indirect.level)}</h4>
+        <p style="font-size:10px;color:#64748b;margin:0 0 6px">${ratings.length} students · Scale 0–3</p>
+        <table><thead><tr><th>Roll No</th><th>Student</th><th>Level</th></tr></thead><tbody>${rows}</tbody></table>`;
+        })
+        .join("");
+  }
+
+  let studentTable = "";
+  if (
+    cloDetails &&
+    cloDetails.length > 0 &&
+    cloDetails[0].direct?.studentScores
+  ) {
+    const studentScores = cloDetails[0].direct.studentScores || [];
+    const cloH = cl
+      .map((c) => `<th colspan="2"><strong>${c.cloCode}</strong></th>`)
+      .join("");
+    const cloS = cl.map(() => `<th>Score%</th><th>Lvl</th>`).join("");
+
+    const sRows = studentScores
+      .slice(0, 100)
+      .map((student) => {
+        const cells = cl
+          .map((clo) => {
+            const studentData = clo.direct?.studentScores?.find(
+              (s) => s.rollNumber === student.rollNumber,
+            );
+            const pct = studentData?.percentage || 0;
+            const lvl = calculateAttainmentLevel(pct, clo.threshold || 0);
+            return `<td>${pct.toFixed(1)}%</td><td>L${lvl}</td>`;
+          })
+          .join("");
+        return `<tr>
+          <td><strong>${student.rollNumber}</strong></td>
+          <td><strong>${student.name}</strong></td>
+          ${cells}
+          <td><strong>${student.percentage?.toFixed(1) || "0"}%</strong></td>
+        </tr>`;
+      })
+      .join("");
+
+    studentTable = `
+      <h2><strong>Student-wise CLO Performance</strong>${studentScores.length > 100 ? " (first 100)" : ""}</h2>
+      <table>
+        <thead>
+          <tr><th>Roll No.</th><th>Name</th>${cloH}<th>Overall %</th></tr>
+          <tr><th></th><th></th>${cloS}<th></th></tr>
+        </thead>
+        <tbody>${sRows}</tbody>
+      </table>
+    `;
+  }
+
+  return `<!DOCTYPE html><html><head><title>${courseCode || "Course"} Course Level Attainment Report</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    color: #111;
+    margin: 20px;
+    position: relative;
+  }
+  h1 { font-size: 20px; color: #1e40af; margin-bottom: 0; }
+  h2 { font-size: 16px; color: #1e293b; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; }
+  h3 { font-size: 14px; color: #334155; margin: 4px 0 10px; }
+  h4 { font-size: 11px; margin: 14px 0 4px; color: #374151; }
+  .meta { font-size: 10px; color: #64748b; margin-bottom: 5px; }
+  .faculty-line { font-size: 11px; color: #334155; background: #f8fafc; padding: 6px 10px; border-radius: 4px; margin: 8px 0; border-left: 4px solid #1e40af; }
+  .scale { font-size: 10px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 10px; margin: 6px 0; }
+  .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 14px; margin: 10px 0; }
+  .sum-item { display: flex; flex-direction: column; gap: 2px; }
+  .sum-lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; }
+  .sum-val { font-size: 14px; font-weight: 700; }
+  .formula { background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; margin: 8px 0; font-size: 10px; color: #78350f; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10px; }
+  th { background: #f1f5f9; padding: 6px 8px; text-align: left; border: 1px solid #e2e8f0; font-weight: 600; }
+  td { padding: 5px 8px; border: 1px solid #e2e8f0; }
+  tr:nth-child(even) { background: #f8fafc; }
+  /* Page number styling */
+  @page {
+    margin: 0.5in;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #666;
+      font-family: Arial, sans-serif;
+    }
+  }
+  @media print {
+    body { margin: 0; }
+    .faculty-line { border-left: 4px solid #000; }
+  }
+</style>
+</head><body>
+<h1><strong>${courseCode || "N/A"} — ${courseName || "N/A"}</strong></h1>
+<h3><strong>Course Level Attainment Report</strong></h3>
+<div class="meta">Semester: ${semester || "N/A"} &nbsp;|&nbsp; Academic Year: ${year || "N/A"} &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}</div>
+${facultyLine}
+<div class="scale">Level Scale: L0=Low (below threshold) · L1=Good (+0–10%) · L2=Very Good (+10–20%) · L3=Excellent (≥+20%) &nbsp;|&nbsp; Formula: 0.8 × Direct + 0.2 × Indirect (when available)</div>
+<div class="sum-grid">
+  <div class="sum-item"><span class="sum-lbl">Avg Direct Level</span><span class="sum-val">${cD.toFixed(2)}</span></div>
+  ${hi ? `<div class="sum-item"><span class="sum-lbl">Avg Indirect Level</span><span class="sum-val">${cI?.toFixed(2) || "0.00"}</span></div>` : "<div></div>"}
+  <div class="sum-item"><span class="sum-lbl">Final Score</span><span class="sum-val" style="color:${lc[cFL]}">${cF.toFixed(2)} — L${cFL} ${levelLabel(cFL)}</span></div>
+</div>
+<div class="formula"><strong>Formula:</strong> ${hi ? `0.8 × ${cD.toFixed(2)} (Direct) + 0.2 × ${cI?.toFixed(2) || "0.00"} (Indirect) = ${cF.toFixed(2)}` : "Direct Attainment Only — no indirect data uploaded"}</div>
+<h2><strong>CLO Attainment Summary</strong></h2>
+<table>
+  <thead>
+    <tr>
+      <th>CLO</th><th>Bloom's</th><th>Threshold</th><th>Attained</th>
+      <th>Avg Direct Lvl</th><th>Direct Level</th>
+      ${hi ? "<th>Avg Indirect Lvl</th><th>Indirect Level</th>" : ""}
+      <th>Final Score</th><th>Final Level</th>
+    </tr>
+  </thead>
+  <tbody>${cloRows}</tbody>
+</table>
+${indSec}
+${studentTable}
+</body></html>`;
+};
 
 const ViewAttainment = () => {
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [courses, setCourses] = useState([]);
-  const [attainmentData, setAttainmentData] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
 
-  const { user } = useAuth();
+  const reportRef = useRef();
 
-  const semesters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
   const years = Array.from(
     { length: 5 },
     (_, i) => new Date().getFullYear() - i,
   );
 
-  // Fetch courses based on semester and year selection
   useEffect(() => {
-    if (selectedSemester && selectedYear) {
-      fetchCourses();
-    }
+    if (selectedSemester && selectedYear) fetchCourses();
   }, [selectedSemester, selectedYear]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      setError("");
       const token = localStorage.getItem("token");
-      const response = await coursesAPI.getCoursesByAcademicPeriod(
-        selectedYear,
-        selectedSemester,
+      const res = await coursesAPI.getCoursesByAcademicPeriod(
+        parseInt(selectedYear),
+        parseInt(selectedSemester),
         token,
       );
-
-      setCourses(response.data || []);
-      setSelectedCourse(""); // Reset course selection
-      setAttainmentData(null);
+      setCourses(res.data.data || []);
+      setError(null);
     } catch (err) {
-      setError("Failed to fetch courses. Please try again.");
+      setError("Failed to fetch courses");
       console.error(err);
-      setCourses([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCourseSelect = async (courseId) => {
-    setSelectedCourse(courseId);
-    if (courseId) {
-      fetchAttainmentData(courseId);
-    }
-  };
-
-  const fetchAttainmentData = async (courseId) => {
+    if (!courseId) return;
     try {
       setLoading(true);
-      setError("");
+      setSelectedCourse(courseId);
       const token = localStorage.getItem("token");
-      const response = await reportsAPI.getCourseAttainment(
+      const res = await reportsAPI.getCourseAttainment(
         courseId,
-        selectedYear,
-        selectedSemester,
+        parseInt(selectedYear),
+        parseInt(selectedSemester),
         token,
       );
-
-      setAttainmentData(response.data);
+      setData(res.data.data);
+      setError(null);
     } catch (err) {
-      setError("Failed to fetch attainment data. Please try again.");
+      setError("Failed to fetch attainment data");
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getAttainmentColor = (percentage) => {
-    if (percentage >= 80) return "bg-green-100 text-green-800 border-green-300";
-    if (percentage >= 70) return "bg-blue-100 text-blue-800 border-blue-300";
-    if (percentage >= 60)
-      return "bg-yellow-100 text-yellow-800 border-yellow-300";
-    return "bg-red-100 text-red-800 border-red-300";
+  const downloadPDF = () => {
+    if (!reportRef.current) return;
+    const opt = {
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: `${data?.courseCode || "course"}_attainment_report.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"] },
+    };
+    html2pdf().set(opt).from(reportRef.current).save();
   };
 
-  const getAttainmentBarColor = (percentage) => {
-    if (percentage >= 80) return "bg-green-500";
-    if (percentage >= 70) return "bg-blue-500";
-    if (percentage >= 60) return "bg-yellow-500";
-    return "bg-red-500";
-  };
+  if (!selectedSemester || !selectedYear) {
+    return (
+      <div style={{ background: "#f3f4f6", padding: 24, minHeight: "100vh" }}>
+        <div
+          style={{
+            background: "white",
+            padding: 16,
+            borderRadius: 12,
+            boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <h3>Select filters to view attainment report</h3>
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            <select
+              onChange={(e) => setSelectedYear(e.target.value)}
+              value={selectedYear}
+              style={{
+                padding: 8,
+                borderRadius: 6,
+                border: "1px solid #d1d5db",
+              }}
+            >
+              <option value="">Select Year</option>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <select
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              value={selectedSemester}
+              style={{
+                padding: 8,
+                borderRadius: 6,
+                border: "1px solid #d1d5db",
+              }}
+            >
+              <option value="">Select Semester</option>
+              {semesters.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !data) {
+    return (
+      <div style={{ background: "#f3f4f6", padding: 24, minHeight: "100vh" }}>
+        <div
+          style={{
+            background: "white",
+            padding: 16,
+            borderRadius: 12,
+            boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+          }}
+        >
+          <h3>Loading...</h3>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Course Attainment</h1>
-        <p className="text-gray-600 mt-1">
-          View student attainment of Course Learning Outcomes (CLOs)
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <FiFilter className="text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Select Course</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Year Selector */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+    <div style={{ background: "#f3f4f6", padding: 24, minHeight: "100vh" }}>
+      {/* Filter Section – Enhanced */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)",
+          padding: 20,
+          marginBottom: 20,
+          borderRadius: 12,
+          border: "1px solid #e5e7eb",
+          boxShadow:
+            "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 500,
+                marginBottom: 6,
+                color: "#374151",
+              }}
+            >
               Academic Year
             </label>
             <select
+              onChange={(e) => {
+                setSelectedYear(e.target.value);
+                setData(null);
+                setSelectedCourse("");
+              }}
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={{
+                padding: "8px 12px",
+                width: "100%",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                backgroundColor: "white",
+                fontSize: 14,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
             >
               <option value="">Select Year</option>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Semester Selector */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 500,
+                marginBottom: 6,
+                color: "#374151",
+              }}
+            >
               Semester
             </label>
             <select
+              onChange={(e) => {
+                setSelectedSemester(e.target.value);
+                setData(null);
+                setSelectedCourse("");
+              }}
               value={selectedSemester}
-              onChange={(e) => setSelectedSemester(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={{
+                padding: "8px 12px",
+                width: "100%",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                backgroundColor: "white",
+                fontSize: 14,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
             >
               <option value="">Select Semester</option>
-              {semesters.map((semester) => (
-                <option key={semester} value={semester}>
-                  {semester}
+              {semesters.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Course Selector */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div style={{ flex: 2, minWidth: 250 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 500,
+                marginBottom: 6,
+                color: "#374151",
+              }}
+            >
               Course
             </label>
             <select
-              value={selectedCourse}
               onChange={(e) => handleCourseSelect(e.target.value)}
+              value={selectedCourse}
+              style={{
+                padding: "8px 12px",
+                width: "100%",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                backgroundColor: "white",
+                fontSize: 14,
+                cursor:
+                  !selectedSemester || !selectedYear
+                    ? "not-allowed"
+                    : "pointer",
+                opacity: !selectedSemester || !selectedYear ? 0.6 : 1,
+                transition: "all 0.2s ease",
+              }}
               disabled={!selectedSemester || !selectedYear}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:text-gray-500"
             >
-              <option value="">
-                {loading ? "Loading courses..." : "Select Course"}
-              </option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.code} - {course.name}
+              <option value="">Select Course</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code} — {c.name}
                 </option>
               ))}
             </select>
           </div>
-        </div>
 
+          {data && (
+            <div>
+              <button
+                onClick={downloadPDF}
+                style={{
+                  padding: "8px 20px",
+                  background: "#1e40af",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontWeight: 500,
+                  fontSize: 14,
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = "#1e3a8a";
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 4px 6px -1px rgba(0,0,0,0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "#1e40af";
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "none";
+                }}
+              >
+                Download PDF
+              </button>
+            </div>
+          )}
+        </div>
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div
+            style={{
+              marginTop: 12,
+              padding: 8,
+              background: "#fee2e2",
+              color: "#dc2626",
+              fontSize: 14,
+              borderRadius: 6,
+            }}
+          >
             {error}
           </div>
         )}
       </div>
 
-      {/* Attainment Overview - Only show when course is selected */}
-      {attainmentData && (
-        <>
-          {/* Course Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-200 p-6">
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {attainmentData.courseCode}: {attainmentData.courseName}
-              </h3>
-              <p className="text-gray-600 mt-1">
-                {attainmentData.semester} {attainmentData.year} | Total
-                Students:{" "}
-                <span className="font-semibold">
-                  {attainmentData.totalStudents}
-                </span>
-              </p>
-            </div>
+      {/* Report Content */}
+      {data && (
+        <div
+          style={{
+            background: "white",
+            padding: 24,
+            borderRadius: 12,
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <div ref={reportRef}>
+            <div dangerouslySetInnerHTML={{ __html: buildPDFHTML(data) }} />
           </div>
-
-          {/* Overall Attainment Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Overall Attainment */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">
-                    Overall Attainment
-                  </p>
-                  <div className="mt-2">
-                    <p className="text-3xl font-bold text-gray-900">
-                      {attainmentData.overallAttainment}%
-                    </p>
-                  </div>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
-                  <FiTrendingUp className="text-xl" />
-                </div>
-              </div>
-            </div>
-
-            {/* Excellent */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Excellent (90-100%)
-                </p>
-                <div className="mt-2 flex items-end justify-between">
-                  <p className="text-3xl font-bold text-green-600">
-                    {attainmentData.distribution.excellent}
-                  </p>
-                  <span className="text-xs text-gray-500">
-                    {Math.round(
-                      (attainmentData.distribution.excellent /
-                        attainmentData.totalStudents) *
-                        100,
-                    )}
-                    %
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Good */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Good (75-89%)
-                </p>
-                <div className="mt-2 flex items-end justify-between">
-                  <p className="text-3xl font-bold text-blue-600">
-                    {attainmentData.distribution.good}
-                  </p>
-                  <span className="text-xs text-gray-500">
-                    {Math.round(
-                      (attainmentData.distribution.good /
-                        attainmentData.totalStudents) *
-                        100,
-                    )}
-                    %
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Needs Improvement */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Needs Improvement
-                </p>
-                <div className="mt-2 flex items-end justify-between">
-                  <p className="text-3xl font-bold text-red-600">
-                    {attainmentData.distribution.needsImprovement}
-                  </p>
-                  <span className="text-xs text-gray-500">
-                    {Math.round(
-                      (attainmentData.distribution.needsImprovement /
-                        attainmentData.totalStudents) *
-                        100,
-                    )}
-                    %
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CLO Attainment Details */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <FiTarget className="text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  CLO Attainment Details
-                </h3>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-6 py-3 text-left">
-                      <span className="text-xs font-semibold text-gray-600 uppercase">
-                        CLO Code
-                      </span>
-                    </th>
-                    <th className="px-6 py-3 text-left">
-                      <span className="text-xs font-semibold text-gray-600 uppercase">
-                        Description
-                      </span>
-                    </th>
-                    <th className="px-6 py-3 text-left">
-                      <span className="text-xs font-semibold text-gray-600 uppercase">
-                        Attainment
-                      </span>
-                    </th>
-                    <th className="px-6 py-3 text-left">
-                      <span className="text-xs font-semibold text-gray-600 uppercase">
-                        Students Achieved
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attainmentData.clos.map((clo, index) => (
-                    <tr
-                      key={clo.id}
-                      className={`border-b border-gray-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      } hover:bg-blue-50 transition-colors`}
-                    >
-                      <td className="px-6 py-4">
-                        <span className="font-semibold text-gray-900">
-                          {clo.code}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-700">{clo.description}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full ${getAttainmentBarColor(
-                                clo.attainmentPercentage,
-                              )}`}
-                              style={{
-                                width: `${clo.attainmentPercentage}%`,
-                              }}
-                            />
-                          </div>
-                          <span
-                            className={`px-3 py-1 rounded-full font-semibold text-sm border ${getAttainmentColor(
-                              clo.attainmentPercentage,
-                            )}`}
-                          >
-                            {clo.attainmentPercentage}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <FiUsers className="text-gray-400" />
-                          <span className="text-gray-900">
-                            {clo.studentCount}/{attainmentData.totalStudents}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Summary Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Average CLO Attainment */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">
-                    Avg CLO Attainment
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {Math.round(
-                      attainmentData.clos.reduce(
-                        (sum, clo) => sum + clo.attainmentPercentage,
-                        0,
-                      ) / attainmentData.clos.length,
-                    )}
-                    %
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
-                  <FiBarChart2 className="text-xl" />
-                </div>
-              </div>
-            </div>
-
-            {/* Highest Attained CLO */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Highest Attained CLO
-                </p>
-                <p className="text-2xl font-bold text-green-600 mt-2">
-                  {
-                    attainmentData.clos.reduce((max, clo) =>
-                      clo.attainmentPercentage > max.attainmentPercentage
-                        ? clo
-                        : max,
-                    ).code
-                  }
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {Math.max(
-                    ...attainmentData.clos.map((c) => c.attainmentPercentage),
-                  )}
-                  % attainment
-                </p>
-              </div>
-            </div>
-
-            {/* Lowest Attained CLO */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Lowest Attained CLO
-                </p>
-                <p className="text-2xl font-bold text-orange-600 mt-2">
-                  {
-                    attainmentData.clos.reduce((min, clo) =>
-                      clo.attainmentPercentage < min.attainmentPercentage
-                        ? clo
-                        : min,
-                    ).code
-                  }
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {Math.min(
-                    ...attainmentData.clos.map((c) => c.attainmentPercentage),
-                  )}
-                  % attainment
-                </p>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Empty State */}
-      {!attainmentData && selectedSemester && selectedYear && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <FiBarChart2 className="text-5xl text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Select a Course
-          </h3>
-          <p className="text-gray-600">
-            Choose a course from the list above to view attainment details
-          </p>
         </div>
       )}
     </div>
