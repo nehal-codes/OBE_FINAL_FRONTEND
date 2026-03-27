@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { adminApi } from '../../apis/admin/adminApi';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { adminApi } from "../../apis/admin/adminApi";
 import {
   FiBook,
   FiGrid,
@@ -8,8 +8,8 @@ import {
   FiArrowLeft,
   FiLoader,
   FiChevronRight,
-  FiHome
-} from 'react-icons/fi';
+  FiHome,
+} from "react-icons/fi";
 
 const ProgramsByLevel = () => {
   const { level } = useParams();
@@ -28,30 +28,40 @@ const ProgramsByLevel = () => {
       const response = await adminApi.getProgramsByLevel(level);
       setData(response.data);
     } catch (err) {
-      console.error('Error fetching programs:', err);
-      setError('Failed to load programs');
+      console.error("Error fetching programs:", err);
+      setError("Failed to load programs");
     } finally {
       setLoading(false);
     }
   };
 
   const getLevelColor = (lvl) => {
-    switch(lvl) {
-      case 'UG': return 'from-emerald-500 to-teal-500';
-      case 'PG': return 'from-blue-500 to-indigo-500';
-      case 'DIPLOMA': return 'from-amber-500 to-orange-500';
-      case 'CERTIFICATE': return 'from-purple-500 to-pink-500';
-      default: return 'from-gray-500 to-slate-500';
+    switch (lvl) {
+      case "UG":
+        return "from-emerald-500 to-teal-500";
+      case "PG":
+        return "from-blue-500 to-indigo-500";
+      case "DIPLOMA":
+        return "from-amber-500 to-orange-500";
+      case "CERTIFICATE":
+        return "from-purple-500 to-pink-500";
+      default:
+        return "from-gray-500 to-slate-500";
     }
   };
 
   const getLevelBadgeColor = (lvl) => {
-    switch(lvl) {
-      case 'UG': return 'bg-emerald-100 text-emerald-700';
-      case 'PG': return 'bg-blue-100 text-blue-700';
-      case 'DIPLOMA': return 'bg-amber-100 text-amber-700';
-      case 'CERTIFICATE': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-gray-100 text-gray-700';
+    switch (lvl) {
+      case "UG":
+        return "bg-emerald-100 text-emerald-700";
+      case "PG":
+        return "bg-blue-100 text-blue-700";
+      case "DIPLOMA":
+        return "bg-amber-100 text-amber-700";
+      case "CERTIFICATE":
+        return "bg-purple-100 text-purple-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -78,7 +88,10 @@ const ProgramsByLevel = () => {
     <div className="space-y-6">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center space-x-2 text-sm text-gray-600">
-        <Link to="/admin" className="hover:text-blue-600 flex items-center gap-1">
+        <Link
+          to="/admin"
+          className="hover:text-blue-600 flex items-center gap-1"
+        >
           <FiHome /> Dashboard
         </Link>
         <FiChevronRight className="text-gray-400" />
@@ -89,13 +102,15 @@ const ProgramsByLevel = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate("/admin")}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <FiArrowLeft className="text-xl text-gray-600" />
           </button>
           <div>
-            <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getLevelBadgeColor(level)} mb-2`}>
+            <div
+              className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getLevelBadgeColor(level)} mb-2`}
+            >
               {level}
             </div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -106,9 +121,6 @@ const ProgramsByLevel = () => {
             )}
           </div>
         </div>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          + Add New Program
-        </button>
       </div>
 
       {/* Programs Grid */}
@@ -120,11 +132,13 @@ const ProgramsByLevel = () => {
             className="group bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all text-left hover:border-blue-200"
           >
             <div className="flex items-start justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getLevelColor(level)} flex items-center justify-center`}>
+              <div
+                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getLevelColor(level)} flex items-center justify-center`}
+              >
                 <FiBook className="text-white text-xl" />
               </div>
               <span className="text-xs font-medium text-gray-500">
-                {program.code || 'No Code'}
+                {program.code || "No Code"}
               </span>
             </div>
 

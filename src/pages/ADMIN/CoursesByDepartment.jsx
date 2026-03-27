@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { adminApi } from '../../apis/admin/adminApi';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { adminApi } from "../../apis/admin/adminApi";
 import {
   FiBook,
   FiGrid,
@@ -11,8 +11,8 @@ import {
   FiHome,
   FiUser,
   FiClipboard,
-  FiCheckCircle
-} from 'react-icons/fi';
+  FiCheckCircle,
+} from "react-icons/fi";
 
 const CoursesByDepartment = () => {
   const { departmentId } = useParams();
@@ -20,7 +20,7 @@ const CoursesByDepartment = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedSemester, setSelectedSemester] = useState('all');
+  const [selectedSemester, setSelectedSemester] = useState("all");
 
   useEffect(() => {
     fetchCourses();
@@ -32,19 +32,23 @@ const CoursesByDepartment = () => {
       const response = await adminApi.getCoursesByDepartment(departmentId);
       setData(response.data);
     } catch (err) {
-      console.error('Error fetching courses:', err);
-      setError('Failed to load courses');
+      console.error("Error fetching courses:", err);
+      setError("Failed to load courses");
     } finally {
       setLoading(false);
     }
   };
 
   const getCourseTypeColor = (type) => {
-    switch(type) {
-      case 'THEORY': return 'bg-blue-100 text-blue-700';
-      case 'PRACTICAL': return 'bg-emerald-100 text-emerald-700';
-      case 'BOTH': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-gray-100 text-gray-700';
+    switch (type) {
+      case "THEORY":
+        return "bg-blue-100 text-blue-700";
+      case "PRACTICAL":
+        return "bg-emerald-100 text-emerald-700";
+      case "BOTH":
+        return "bg-purple-100 text-purple-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -68,15 +72,19 @@ const CoursesByDepartment = () => {
   }
 
   const semesters = data?.semesters || [];
-  const filteredSemesters = selectedSemester === 'all' 
-    ? semesters 
-    : semesters.filter(s => s.semester === parseInt(selectedSemester));
+  const filteredSemesters =
+    selectedSemester === "all"
+      ? semesters
+      : semesters.filter((s) => s.semester === parseInt(selectedSemester));
 
   return (
     <div className="space-y-6">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center space-x-2 text-sm text-gray-600 flex-wrap">
-        <Link to="/admin" className="hover:text-blue-600 flex items-center gap-1">
+        <Link
+          to="/admin"
+          className="hover:text-blue-600 flex items-center gap-1"
+        >
           <FiHome /> Dashboard
         </Link>
         <FiChevronRight className="text-gray-400" />
@@ -114,9 +122,6 @@ const CoursesByDepartment = () => {
             </p>
           </div>
         </div>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          + Add Course
-        </button>
       </div>
 
       {/* Department Info & HOD */}
@@ -128,8 +133,12 @@ const CoursesByDepartment = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Head of Department</p>
-              <p className="font-semibold text-gray-900">{data.department.hod.name}</p>
-              <p className="text-sm text-gray-600">{data.department.hod.email}</p>
+              <p className="font-semibold text-gray-900">
+                {data.department.hod.name}
+              </p>
+              <p className="text-sm text-gray-600">
+                {data.department.hod.email}
+              </p>
             </div>
           </div>
         </div>
@@ -139,30 +148,40 @@ const CoursesByDepartment = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Total Courses</p>
-          <p className="text-2xl font-bold text-gray-900">{data?.summary?.totalCourses}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {data?.summary?.totalCourses}
+          </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Total Credits</p>
-          <p className="text-2xl font-bold text-gray-900">{data?.summary?.totalCredits}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {data?.summary?.totalCredits}
+          </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Total CLOs</p>
-          <p className="text-2xl font-bold text-gray-900">{data?.summary?.totalCLOs}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {data?.summary?.totalCLOs}
+          </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Assessments</p>
-          <p className="text-2xl font-bold text-gray-900">{data?.summary?.totalAssessments}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {data?.summary?.totalAssessments}
+          </p>
         </div>
       </div>
 
       {/* Semester Filter */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
         <button
-          onClick={() => setSelectedSemester('all')}
+          onClick={() => setSelectedSemester("all")}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap
-            ${selectedSemester === 'all' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            ${
+              selectedSemester === "all"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
         >
           All Semesters
         </button>
@@ -171,9 +190,11 @@ const CoursesByDepartment = () => {
             key={sem.semester}
             onClick={() => setSelectedSemester(sem.semester)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap
-              ${selectedSemester === sem.semester.toString() 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              ${
+                selectedSemester === sem.semester.toString()
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
           >
             Semester {sem.semester}
           </button>
@@ -183,7 +204,10 @@ const CoursesByDepartment = () => {
       {/* Courses by Semester */}
       <div className="space-y-8">
         {filteredSemesters.map((semester) => (
-          <div key={semester.semester} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div
+            key={semester.semester}
+            className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+          >
             <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -191,13 +215,18 @@ const CoursesByDepartment = () => {
                 </h2>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-gray-600">
-                    <span className="font-medium">{semester.courses.length}</span> Courses
+                    <span className="font-medium">
+                      {semester.courses.length}
+                    </span>{" "}
+                    Courses
                   </span>
                   <span className="text-gray-600">
-                    <span className="font-medium">{semester.totalCredits}</span> Credits
+                    <span className="font-medium">{semester.totalCredits}</span>{" "}
+                    Credits
                   </span>
                   <span className="text-gray-600">
-                    <span className="font-medium">{semester.totalCLOs}</span> CLOs
+                    <span className="font-medium">{semester.totalCLOs}</span>{" "}
+                    CLOs
                   </span>
                 </div>
               </div>
@@ -216,15 +245,21 @@ const CoursesByDepartment = () => {
                         <h3 className="font-semibold text-gray-900 group-hover:text-blue-600">
                           {course.name}
                         </h3>
-                        <p className="text-sm text-gray-500 mt-1">{course.code}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {course.code}
+                        </p>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCourseTypeColor(course.type)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getCourseTypeColor(course.type)}`}
+                      >
                         {course.type}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-4 text-sm mb-3">
-                      <span className="text-gray-600">{course.credits} Credits</span>
+                      <span className="text-gray-600">
+                        {course.credits} Credits
+                      </span>
                       {course.category && (
                         <span className="text-gray-600">{course.category}</span>
                       )}

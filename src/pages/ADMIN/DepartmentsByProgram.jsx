@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { adminApi } from '../../apis/admin/adminApi';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { adminApi } from "../../apis/admin/adminApi";
 import {
   FiGrid,
   FiUsers,
@@ -9,8 +9,8 @@ import {
   FiLoader,
   FiChevronRight,
   FiHome,
-  FiUser
-} from 'react-icons/fi';
+  FiUser,
+} from "react-icons/fi";
 
 const DepartmentsByProgram = () => {
   const { programId } = useParams();
@@ -29,8 +29,8 @@ const DepartmentsByProgram = () => {
       const response = await adminApi.getDepartmentsByProgram(programId);
       setData(response.data);
     } catch (err) {
-      console.error('Error fetching departments:', err);
-      setError('Failed to load departments');
+      console.error("Error fetching departments:", err);
+      setError("Failed to load departments");
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,10 @@ const DepartmentsByProgram = () => {
     <div className="space-y-6">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center space-x-2 text-sm text-gray-600 flex-wrap">
-        <Link to="/admin" className="hover:text-blue-600 flex items-center gap-1">
+        <Link
+          to="/admin"
+          className="hover:text-blue-600 flex items-center gap-1"
+        >
           <FiHome /> Dashboard
         </Link>
         <FiChevronRight className="text-gray-400" />
@@ -97,9 +100,6 @@ const DepartmentsByProgram = () => {
             </p>
           </div>
         </div>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          + Add Department
-        </button>
       </div>
 
       {/* Summary Cards */}
@@ -111,7 +111,9 @@ const DepartmentsByProgram = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Departments</p>
-              <p className="text-2xl font-bold text-gray-900">{data?.totalDepartments}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data?.totalDepartments}
+              </p>
             </div>
           </div>
         </div>
@@ -122,7 +124,9 @@ const DepartmentsByProgram = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Courses</p>
-              <p className="text-2xl font-bold text-gray-900">{data?.summary?.totalCourses}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data?.summary?.totalCourses}
+              </p>
             </div>
           </div>
         </div>
@@ -133,7 +137,9 @@ const DepartmentsByProgram = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Faculty</p>
-              <p className="text-2xl font-bold text-gray-900">{data?.summary?.totalFaculties}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {data?.summary?.totalFaculties}
+              </p>
             </div>
           </div>
         </div>
@@ -170,15 +176,21 @@ const DepartmentsByProgram = () => {
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-gray-50 rounded-lg p-2">
-                <p className="text-lg font-semibold text-gray-900">{dept._count.courses}</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {dept._count.courses}
+                </p>
                 <p className="text-xs text-gray-600">Courses</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <p className="text-lg font-semibold text-gray-900">{dept._count.faculties}</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {dept._count.faculties}
+                </p>
                 <p className="text-xs text-gray-600">Faculty</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <p className="text-lg font-semibold text-gray-900">{dept._count.students}</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {dept._count.students}
+                </p>
                 <p className="text-xs text-gray-600">Students</p>
               </div>
             </div>
