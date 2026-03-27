@@ -56,18 +56,7 @@ const menuItems = [
     path: "/admin/users",
     roles: ["ADMIN"],
   },
-  {
-    text: "Faculty Management",
-    icon: <FiUsers />,
-    path: "/admin/faculty",
-    roles: ["ADMIN"],
-  },
-  {
-    text: "Student Management",
-    icon: <FiUserPlus />,
-    path: "/admin/students",
-    roles: ["ADMIN"],
-  },
+
   // HOD SPECIFIC MENU ITEMS
 
   {
@@ -95,33 +84,14 @@ const menuItems = [
     text: "Attainment Review",
     icon: <FiCheckCircle />,
     path: "/attainment-review",
-    roles: ["FACULTY", "HOD"],
-  },
-
-  {
-    text: "Question Bank",
-    icon: <FiFileText />,
-    path: "/question-bank",
     roles: ["HOD"],
   },
+
   {
     text: "Reports",
     icon: <FiBarChart2 />,
     path: "/hod/reports/program",
     roles: ["HOD"],
-  },
-  // COMMON MENU ITEMS
-  {
-    text: "Reports",
-    icon: <FiBarChart2 />,
-    path: "/reports",
-    roles: ["ADMIN"],
-  },
-  {
-    text: "Settings",
-    icon: <FiSettings />,
-    path: "/settings",
-    roles: ["HOD", "ADMIN"],
   },
 ];
 
@@ -147,6 +117,32 @@ const Layout = () => {
     return item.path?.[Object.keys(item.path)[0]] || "/";
   };
 
+  const normalizePath = (path = "") => path.replace(/\/+$/, "");
+
+  const buildPathRegex = (path = "") => {
+    const cleanPath = normalizePath(path);
+    if (!cleanPath) return null;
+
+    // Dynamic params support (e.g. /faculty/courses/:courseId/assessments)
+    if (cleanPath.includes(":")) {
+      const pattern =
+        "^" + cleanPath.replace(/:[^/]+/g, "[^/]+") + "(?:$|/.*$)";
+      return new RegExp(pattern);
+    }
+
+    const escaped = cleanPath.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
+    return new RegExp("^" + escaped + "(?:$|/.*$)");
+  };
+
+  const isRouteActive = (itemPath) => {
+    const currentPath = normalizePath(location.pathname);
+    const path = normalizePath(itemPath);
+    if (!path) return false;
+
+    const regex = buildPathRegex(path);
+    return regex ? regex.test(currentPath) : false;
+  };
+
   // Debug: Log user role and filtered menu items
   console.log("Layout - User:", user);
   console.log("Layout - User Role:", user?.role);
@@ -168,13 +164,21 @@ const Layout = () => {
   );
 
   useEffect(() => {
-    // Find active item based on current path
-    const currentItem = menuItems.find((item) => {
+    // Find active item based on current path with best (longest) match priority
+    const bestMatch = filteredMenu.reduce((best, item) => {
       const itemPath = getItemPath(item);
-      return location.pathname.startsWith(itemPath);
-    });
-    setActiveItem(currentItem?.text || "");
-  }, [location.pathname, user]);
+      if (!itemPath) return best;
+
+      if (isRouteActive(itemPath)) {
+        if (!best || itemPath.length > best.path.length) {
+          return { item, path: itemPath };
+        }
+      }
+      return best;
+    }, null);
+
+    setActiveItem(bestMatch?.item?.text || "");
+  }, [location.pathname, user, filteredMenu]);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -246,7 +250,7 @@ const Layout = () => {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-gray-900 tracking-tight">
-                    OBE System
+                    LearnAlign
                   </h1>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Academic Dashboard
@@ -308,9 +312,7 @@ const Layout = () => {
 
           {filteredMenu.map((item) => {
             const itemPath = getItemPath(item);
-            const isActive =
-              location.pathname === itemPath ||
-              location.pathname.startsWith(itemPath);
+            const isActive = item.text === activeItem;
 
             return (
               <button
@@ -380,7 +382,7 @@ const Layout = () => {
               <div className="hidden md:flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-600 to-indigo-600"></div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  Outcome-Based Education System
+                  LearnAlign
                 </h1>
                 <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded-full">
                   v2.1
